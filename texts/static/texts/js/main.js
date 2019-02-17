@@ -13,7 +13,7 @@
         elem.className = 'modal';
         elem.innerHTML = `
           <div class="modal-header">
-            <span class="modal-dragPanel">drag this</span>
+            <span class="modal-dragPanel"></span>
             <span class="modal-close">X</span>
           </div>
           <div class="modal-body">
@@ -46,12 +46,16 @@
         parent.insertBefore(elem, target);
   
         var body = elem.getElementsByClassName('modal-content')[0];
+        var dragPanel = elem.getElementsByClassName('modal-dragPanel')[0];
   
         // get data info
         ajaxUrl = target.dataset['ajaxUrl'];
         fetch(ajaxUrl).then(function (res) {
           return res.text();
-        }).then(function (html) { body.innerHTML = html })
+        }).then(function (html) { 
+          body.innerHTML = html;
+          dragPanel.innerHTML = window.location.host + ajaxUrl;
+        })
   
         var close = elem.getElementsByClassName('modal-close')[0];
         close.addEventListener('click', function () {

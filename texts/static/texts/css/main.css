@@ -66,29 +66,29 @@ aside {
 .modal {
   position: absolute;
   z-index: 20;
-  height: 150px;
+  height: 200px;
   width: 300px;
   background-color: #fff;
   border: 1px solid #000; }
   .modal-header {
-    height: 40px;
+    height: 60px;
     padding: 8px;
     display: flex;
     align-items: center; }
   .modal-dragPanel {
     width: 255px;
-    height: 100%;
+    min-height: 30px;
     background-color: #828a8a;
     color: white;
     cursor: pointer;
-    border-radius: 4px; }
+    border-radius: 4px;
+    padding: 2px 4px;
+    word-wrap: break-word; }
   .modal-close {
     position: absolute;
     right: 10px;
     cursor: pointer; }
-  .modal-body {
-    height: 90%; }
   .modal-content {
     padding: 8px;
-    height: 100px;
+    height: 130px;
     overflow-y: auto; }
