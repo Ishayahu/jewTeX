@@ -19,6 +19,10 @@ from django.conf.urls import url, include
 import texts.views
 
 urlpatterns = [
+    url(r'^$', texts.views.index, name = 'index'),
+    path('<slug:author>/', texts.views.author, name = 'author'),
+    path('<slug:author>/<slug:book>/', texts.views.book, name = 'book'),
+    path('open/<slug:author>/<slug:book>/siman=<int:siman>&seif=<int:seif>/', texts.views.open_by_siman_and_seif, name = 'open_by_siman_seif'),
     url(r'open/([^/]+)/([^/]+)/([^/]+=[^/]+)&?/$', texts.views.open_text, name = 'open'),
     url(r'api/text/([^/]+)/([^/]+)/([^/]+=[^/]+)&?/$', texts.views.api_request, name = 'text_api_request'),
 

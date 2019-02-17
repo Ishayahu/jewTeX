@@ -10,8 +10,12 @@
 </head>
 <body>
     <ul>
-        {% for author in authors %}
-            <li><a href="{% url 'author' author %}">{{ author }}</a></li>
+        {% for chapter in content.chapters %}
+            <li> {{ chapter.name }}:
+                {% for seif in chapter.seifim%}
+                    <a href="{% url 'open_by_siman_seif' author book chapter.name seif %}">{{ seif }}</a>
+                {% endfor %}
+            </li>
         {% endfor %}
     </ul>
 

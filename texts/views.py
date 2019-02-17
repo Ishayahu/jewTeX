@@ -144,7 +144,7 @@ class Link:
 
     def get_path(self):
         filename = self.chapter if self.chapter else self.siman
-        return os.path.join(self.author, self.book, filename)
+        return os.path.join(*list(map(str,(self.author, self.book, filename))))
 
     def get_regexp(self):
         r = '.*'
@@ -206,6 +206,9 @@ def htmlizer(text, link):
     """
     delimiters = '%'
     text = text.replace('\n','<p>')
+    # заменяем <ramo> на <div class='ramo'>
+    for to_replace, closing_tag, tag in re.findall(r'(<(/?)([^/>]+)>)',text):
+        text = text.replace(to_replace,"<div class='{}'>".format(tag) if not closing_tag else "</div>")
     # TODO заменяем ссылки {{taz/1}} на ссылки /api/text/taz/taz_al_yore_dea/siman=92&siman_katan=1/
     for to_replace, commentator_kitzur_name, siman_katan in re.findall('({0}{0}([^/]+)/([^{0}]+){0}{0})'.format(delimiters),text):
         # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
@@ -216,6 +219,53 @@ def htmlizer(text, link):
                             '<sup><span class="ajax-block"><a href="#!" class="js-ajax-link" data-ajax-url="{url}">{name}</a></span></sup>'.format(
                                 **commentators[commentator_full_name](link, siman_katan).get_link()))
     return text
+
+
+
+
+
+
+
+def get_response_by_link(request, link, template, context, add_navigation = True):
+    # TODO пока работает только с числами
+    text = get_text(link)
+    html = htmlizer(text, link)
+    context['text'] = html
+    if add_navigation:
+        context['up'] = reverse('book', kwargs={'author': link.author, 'book': link.book})
+        content = get_book_content(link.author, link.book)
+        context['prev'] = None
+        context['next'] = None
+        cur_chapter_idx = content.chapter_idx(link.siman)
+        cur_seif_idx = content.chapters[cur_chapter_idx].seifim.index(str(link.seif))
+        seif_count = len( content.chapters[cur_chapter_idx].seifim)
+        if cur_seif_idx+1 < seif_count:
+            context['next'] = reverse('open_by_siman_seif', kwargs={'author': link.author,
+                                                                    'book': link.book,
+                                                                    'siman':  int(content.chapters[cur_chapter_idx].name),
+                                                                    'seif':  int(content.chapters[cur_chapter_idx].seifim[cur_seif_idx+1])})
+        else:
+            if int(cur_chapter_idx)+1 in content.chapters:
+                context['next'] = reverse('open_by_siman_seif', kwargs = {'author': link.author,
+                                                                          'book': link.book,
+                                                                          'siman': int(content.chapters[cur_chapter_idx+1].name),
+                                                                          'seif': int(content.chapters[int(cur_chapter_idx)+1].seifim[0])})
+        if cur_seif_idx-1 >= 0:
+            context['prev'] = reverse('open_by_siman_seif', kwargs={'author': link.author,
+                                                                    'book': link.book,
+                                                                    'siman': int(content.chapters[cur_chapter_idx].name),
+                                                                    'seif':  int(content.chapters[cur_chapter_idx].seifim[cur_seif_idx-1]) })
+        else:
+            if int(cur_chapter_idx)-1 in content.chapters:
+                context['prev'] = reverse('open_by_siman_seif', kwargs = {'author': link.author,
+                                                                          'book': link.book,
+                                                                          'siman':  int(content.chapters[cur_chapter_idx-1].name),
+                                                                          'seif': int(content.chapters[int(cur_chapter_idx)-1].seifim[-1])})
+
+
+    return render(request, template, context)
+
+
 
 
 def open_text(request, author, book, params):
@@ -229,20 +279,16 @@ def open_text(request, author, book, params):
         return HttpResponse("author = {}<p>book = {}<p>params = {}<hr />link = {}<hr />link_errors = {}".format(
             author, book, params, link, link.errors))
 
-    text = get_text(link)
-    html = htmlizer(text, link)
-    # TODO static files
-
-    # template = loader.get_template('texts/index.html')
-    # context = {
+    # text = get_text(link)
+    # html = htmlizer(text, link)
+    # return render(request, 'texts/open.html', {
     #     'title': '{}:{}'.format(author,book),
     #     'text':html
-    # }
-    # return HttpResponse(template.render(context, request))
-    return render(request, 'texts/index.html', {
-        'title': '{}:{}'.format(author,book),
-        'text':html
-    })
+    # })
+
+    return get_response_by_link(request, link, 'texts/open.html', {'title': '{}:{}'.format(author,book),
+                                                                   'header': "{}:{}".format(link.siman, link.seif)}
+                                )
 
 def api_request(request, author, book, params):
     author = normalize_author(author)
@@ -253,16 +299,113 @@ def api_request(request, author, book, params):
         return HttpResponse("author = {}<p>book = {}<p>params = {}<hr />link = {}<hr />link_errors = {}".format(
             author, book, params, link, link.errors))
 
-    text = get_text(link)
-    html = htmlizer(text, link)
-    # TODO static files
+    # text = get_text(link)
+    # html = htmlizer(text, link)
+    # return render(request, 'texts/clean_text.html', {
+    #     'text':html
+    # })
+    return get_response_by_link(request, link, 'texts/clean_text.html', {}, False)
 
-    # template = loader.get_template('texts/index.html')
-    # context = {
+
+def open_by_siman_and_seif(request, author, book, siman, seif):
+    author = normalize_author(author)
+    book = normalize_book(book)
+
+    link = get_link()
+    link.set_author(author)
+    link.set_book(book)
+    link.set_siman(siman)
+    link.set_seif(seif)
+    if not link.validate():
+        return HttpResponse("author = {}<p>book = {}<hr />link = {}<hr />link_errors = {}".format(
+            author, book, link, link.errors))
+    # text = get_text(link)
+    # html = htmlizer(text, link)
+    #
+    # return render(request, 'texts/open.html', {
     #     'title': '{}:{}'.format(author,book),
     #     'text':html
-    # }
-    # return HttpResponse(template.render(context, request))
-    return render(request, 'texts/clean_text.html', {
-        'text':html
+    # })
+    return get_response_by_link(request, link, 'texts/open.html', {'title': '{}:{}'.format(author,book),
+                                                                   'header': "{}:{}".format(link.siman, link.seif)})
+
+
+
+
+def get_authors():
+    """
+    По запросу получаем из хранилища текст и возвращаем его
+    :param request:
+    :return: str
+    """
+
+    return [_ for _ in os.listdir(TEXTS_PATH) if not _.startswith('.')]
+
+def get_books(author):
+    """
+    По запросу получаем из хранилища текст и возвращаем его
+    :param request:
+    :return: str
+    """
+
+    return [_ for _ in os.listdir(os.path.join(TEXTS_PATH,author)) if not _.startswith('.')]
+
+def index(request):
+    authors = get_authors()
+    return render(request, 'texts/index.html', {
+        'authors':authors, 'title': "Список авторов"
+    })
+
+def author(request, author):
+    books = get_books(author)
+    return render(request, 'texts/author.html', {
+        'books':books, 'author': author, 'title': "Список книг для {}".format(author)
+    })
+
+def get_book_content(author, book):
+    """
+    По запросу получаем из хранилища текст и возвращаем его
+    :param request:
+    :return: str
+    """
+    class Chapter:
+        def __init__(self, name):
+            self.seifim = []
+            self.name = name
+        def append(self, item):
+            self.seifim.append(item)
+        def __repr__(self):
+            return self.__str__()
+        def __str__(self):
+            return "{}:{}".format(self.name, str(self.seifim))
+        # def __iter__(self):
+        #     return iter(self.seifim)
+
+    class Content:
+        def __init__(self):
+            self.chapters = []
+        def chapter_idx(self, chapter):
+            return [_.name for _ in self.chapters].index(str(chapter))
+        def __repr__(self):
+            return self.__str__()
+        def __str__(self):
+            return str(self.chapters)
+
+    content = Content()
+    for chapter in [_ for _ in os.listdir(os.path.join(TEXTS_PATH,author, book)) if not _.startswith('.')]:
+        content.chapters.append(Chapter(chapter[:-4])) # отбрасываем .txt
+        with open(os.path.join(TEXTS_PATH,author, book,chapter),'r', encoding = 'utf8') as f:
+            c = f.read()
+            for seif in re.findall(r"\[\[seif=(\d+)]]",c):
+                content.chapters[-1].append(seif)
+    return content
+
+
+
+
+def book(request, author, book):
+    content = get_book_content(author, book)
+    # raise ImportError
+    return render(request, 'texts/book.html', {
+        'content':content, 'author': author, 'book': book, 'title': "Содержание книги {} от {}".format(book, author)
     })

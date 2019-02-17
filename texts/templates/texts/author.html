@@ -10,8 +10,8 @@
 </head>
 <body>
     <ul>
-        {% for author in authors %}
-            <li><a href="{% url 'author' author %}">{{ author }}</a></li>
+        {% for book in books %}
+            <li><a href="{% url 'book' author book %}">{{ book }}</a></li>
         {% endfor %}
     </ul>
 
