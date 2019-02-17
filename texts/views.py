@@ -5,39 +5,10 @@ import re
 from django.shortcuts import render, redirect
 from django.template import loader
 from django.urls import reverse
-import texts.commentators
-import cyrtranslit
-
 
 TEXTS_PATH = os.path.join(os.getcwd(),'TEXTS_DB')
 
-
-
-def normalize_author(author):
-    author = author.lower()
-    author = cyrtranslit.to_latin(author,'ru')
-    author_kitzur = {'taz': 'david_halevi_segal',
-                     'shah': 'shabbatai_hakohen',
-                     'tur': 'jacob_ben_asher',
-                     'hamechaber': 'joseph_karo',
-                     'maran': 'joseph_karo',
-                 }
-    return author_kitzur.get(author, author)
-
-
-def normalize_book(book):
-    book = book.lower()
-    book = cyrtranslit.to_latin(book,'ru')
-    book_kitzur = {'sha1': 'shulchan_aruch_orach_chayim',
-                   'sha2': 'shulchan_aruch_yoreh_deah',
-                   'sha3': 'shulchan_aruch_even_haezer',
-                   'sha4': 'shulchan_aruch_choshen_mishpat',
-                 }
-    return book_kitzur.get(book, book)
-
-
-commentators = {normalize_author('таз'): texts.commentators.Taz,
-                normalize_author('шах'): texts.commentators.Shah}
+author_kitzur = {'taz': 'david_alevi_segel'}
 
 
 def parser(link, author, book, params):
@@ -48,9 +19,8 @@ def parser(link, author, book, params):
     :param book: str
     :param params: str
     """
-    # if author in author_kitzur:
-    #     author = author_kitzur[author]
-    # author = normalize_author(author)
+    if author in author_kitzur:
+        author = author_kitzur[author]
     link.set_author(author)
     link.set_book(book)
     for k, v in re.findall('([^=]*)=([^&]*)&?',params):
@@ -194,36 +164,39 @@ def get_text(link):
         # вроде как при успешном поиске не должно такого быть
         return "TEXT NOT FOUND"
 
+class Taz:
+    def __init__(self, link_to_parent, siman_katan):
+        """
+
+        :param link_to_parent: Link
+        :param siman_katan: str
+        """
+        self.helek = "_".join(link_to_parent.book.split("_")[-2:])
+        self.siman = link_to_parent.siman
+        self.siman_katan = siman_katan
+    def get_href(self):
+        return reverse('text_api_request', args=[author_kitzur['taz'],
+                                                 'taz_al_{}'.format(self.helek),
+                                                 'siman={}&siman_katan={}'.format(self.siman, self.siman_katan)])
 
 
 def htmlizer(text, link):
     """
-    Делаем из текста html. link - ссылка на запрос основной страницы, чтобы из контекста понять, какой комментарий нам нужен, например,
-    раши на брейшис или шмойс
+    Делаем из текста html
     :param text: str
     :param link: Link
     :return: str
     """
-    delimiters = '%'
     text = text.replace('\n','<p>')
-    # TODO заменяем ссылки {{taz/1}} на ссылки /api/text/taz/taz_al_yore_dea/siman=92&siman_katan=1/
-    for to_replace, commentator_kitzur_name, siman_katan in re.findall('({0}{0}([^/]+)/([^{0}]+){0}{0})'.format(delimiters),text):
-        # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
-        # commentator_full_name = author_kitzur[commentator_kitzur_name]
-        commentator_full_name = author = normalize_author(commentator_kitzur_name)
+    # TODO заменяем ссылки {{taz_al_yore_dea/1}} на ссылки /api/text/taz/taz_al_yore_dea/siman=92&siman_katan=1/
+    for g in re.findall('({{([^/]+)/(.+)}})',text):
         # [('{{taz/1}}', 'taz', '1')]
-        text = text.replace(to_replace,
-                            '<sup><span class="ajax-block"><a href="#!" class="js-ajax-link" data-ajax-url="{url}">{name}</a></span></sup>'.format(
-                                **commentators[commentator_full_name](link, siman_katan).get_link()))
+        text = text.replace(g[0],Taz(link,g[2]).get_href())
     return text
 
 
 def open_text(request, author, book, params):
-    author = normalize_author(author)
-    book = normalize_book(book)
-
     link = get_link()
-
     parser(link, author, book, params)
     if not link.validate():
         return HttpResponse("author = {}<p>book = {}<p>params = {}<hr />link = {}<hr />link_errors = {}".format(
@@ -245,8 +218,6 @@ def open_text(request, author, book, params):
     })
 
 def api_request(request, author, book, params):
-    author = normalize_author(author)
-    book = normalize_book(book)
     link = get_link()
     parser(link, author, book, params)
     if not link.validate():
