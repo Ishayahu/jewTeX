@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>{{ title }}</title>
+
+    <link rel="stylesheet" href="{% static "texts/css/main.css" %}" />
+</head>
+<body>
+
+  <div class="container">
+
+    <header>
+      <h1>{{ header }}</h1>
+    </header>
+
+    <section class="grid-top">
+      <aside class="green">
+        <div class="content"></div>
+      </aside>
+    </section>
+
+    <section class="grid-middle">
+
+      <aside class="pink">
+        <div class="content"></div>
+      </aside>
+
+      <article>
+        
+        {{ text | safe }}
+        
+      </article>
+
+      <aside class="yellow">
+        <div class="content"></div>
+      </aside>
+
+    </section>
+
+    <section class="grid-bottom">
+      <aside class="black">
+        <div class="content"></div>
+      </aside>
+    </section>
+
+    <footer>
+      &copy; 2019
+    </footer>
+
+  </div>
+
+  <div class="modals-wrapper"></div>
+  
+</body>
+<script src="{% static "texts/js/main.js" %}"></script>
+</html>
