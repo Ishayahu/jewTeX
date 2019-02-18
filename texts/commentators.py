@@ -37,10 +37,10 @@ def SHACommentatorsFactory(author, book_template, russian_link_template, card_co
                     'name': russian_link_template.format(self.siman_katan)}
 
     return Commentator
-
-Taz = SHACommentatorsFactory('david_halevi_segal', 'taz_al_{}', 'ТАЗ-{}', '#f2dbcc')
-Shah = SHACommentatorsFactory('shabbatai_hakohen', 'shah_al_{}', 'ШАХ-{}', '#f0f8ff')
-DEFAULT_AUTHOR = SHACommentatorsFactory('noname', 'noname_{}', 'noname-{}', '#f7786b')
+# пока доступные варианты классов карточек red, blue, green, yellow, purple, gray
+Taz = SHACommentatorsFactory('david_halevi_segal', 'taz_al_{}', 'ТАЗ-{}', 'red')
+Shah = SHACommentatorsFactory('shabbatai_hakohen', 'shah_al_{}', 'ШАХ-{}', 'blue')
+DEFAULT_AUTHOR = SHACommentatorsFactory('noname', 'noname_{}', 'noname-{}', 'gray')
 
 # class Taz:
 #     def __init__(self, link_to_parent, siman_katan):
