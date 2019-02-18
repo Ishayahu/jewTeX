@@ -92,3 +92,22 @@ aside {
     padding: 8px;
     height: 130px;
     overflow-y: auto; }
+
+.modal.red {
+  background-color:#ffdfdf;
+}
+.modal.blue {
+  background-color: #cfcfff;
+}
+.modal.green {
+  background-color: #ceffce;
+}
+.modal.yellow {
+  background-color: #ffffcd;
+}
+.modal.purple {
+  background-color: #f7c7f7;
+}
+.modal.gray {
+  background-color: #e2e2e2;
+}

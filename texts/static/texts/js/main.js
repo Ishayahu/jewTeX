@@ -51,10 +51,11 @@
         // get data info
         ajaxUrl = target.dataset['ajaxUrl'];
         fetch(ajaxUrl).then(function (res) {
-          return res.text();
-        }).then(function (html) { 
-          body.innerHTML = html;
-          dragPanel.innerHTML = window.location.host + ajaxUrl;
+          return res.json();
+        }).then(function (json) { 
+          body.innerHTML = json['content'];
+          dragPanel.innerHTML = json['title'];
+          elem.classList.add(json['cardColor']);
         })
   
         var close = elem.getElementsByClassName('modal-close')[0];
