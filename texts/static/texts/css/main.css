@@ -65,6 +65,7 @@ aside {
 
 .modal {
   position: absolute;
+  font-weight: normal;
   z-index: 20;
   height: 200px;
   width: 300px;
