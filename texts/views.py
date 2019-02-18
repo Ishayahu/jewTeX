@@ -7,11 +7,14 @@ from django.template import loader
 from django.urls import reverse
 import texts.commentators
 import cyrtranslit
-
+from django.http import JsonResponse
 
 TEXTS_PATH = os.path.join(os.getcwd(),'TEXTS_DB')
 
 
+def get_author(author):
+    author = normalize_author(author)
+    return commentators.get(author, texts.commentators.DEFAULT_AUTHOR)()
 
 def normalize_author(author):
     author = author.lower()
@@ -70,6 +73,7 @@ class Link:
         self.book = None
         self.siman = None
         self.chapter = None
+        self.sub_chapter = None
         self.seif = None
         self.page = None
         self.dibur_amathil = None
@@ -108,18 +112,24 @@ class Link:
 
     def set_seif(self, v):
         self.seif = v
+        self.sub_chapter = v
 
     def set_page(self, v):
         self.page = v
 
     def set_dibur_amathil(self, v):
         self.dibur_amathil = v
+        self.sub_chapter = v
 
     def set_siman_katan(self, v):
         self.siman_katan = v
+        self.sub_chapter = v
 
     def set_referrerer(self, v):
         self.referrerer = v
+
+    def short_str(self):
+        return "{}:{}".format(self.chapter, self.sub_chapter)
 
     def __str__(self):
         return """{}:{} глава {} симан {}<p>
@@ -157,13 +167,26 @@ class Link:
             r += r"\[\[page={}]].*?".format(self.page)
         if self.dibur_amathil:
             r += r"\[\[dibur_amathil={}]].*?".format(self.dibur_amathil)
-
+        # Добавляем содержимое
         r += "(.*?)"
-        if self.referrerer:
-            r += r"\[\[/{}]]".format(self.referrerer)
-        else:
-            r += r"\[\["
-        r += ".*"
+        # if self.referrerer:
+        #     r += r"\[\[/{}]]".format(self.referrerer)
+        # else:
+        #     r += r"\[\["
+
+        # до следующего такого же
+        if self.siman_katan:
+            r += r"(?:\[\[siman_katan=.*|\[\[$)"
+        if self.seif:
+            r += r"(?:\[\[seif=|\[\[$)"
+        if self.page:
+            r += r"(?:\[\[page=|\[\[$)"
+        if self.dibur_amathil:
+            r += r"(?:\[\[dibur_amathil=|\[\[$)"
+
+
+
+        # r += ".*"
         return r
 
 
@@ -209,15 +232,35 @@ def htmlizer(text, link):
     # заменяем <ramo> на <div class='ramo'>
     for to_replace, closing_tag, tag in re.findall(r'(<(/?)([^/>]+)>)',text):
         text = text.replace(to_replace,"<div class='{}'>".format(tag) if not closing_tag else "</div>")
-    # TODO заменяем ссылки {{taz/1}} на ссылки /api/text/taz/taz_al_yore_dea/siman=92&siman_katan=1/
+
+    # обрабатываем "короткие" ссылки {{taz/1}} на ссылки /api/text/taz/taz_al_yore_dea/siman=92&siman_katan=1/
     for to_replace, commentator_kitzur_name, siman_katan in re.findall('({0}{0}([^/]+)/([^{0}]+){0}{0})'.format(delimiters),text):
         # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
         # commentator_full_name = author_kitzur[commentator_kitzur_name]
-        commentator_full_name = author = normalize_author(commentator_kitzur_name)
+        commentator_full_name = normalize_author(commentator_kitzur_name)
         # [('{{taz/1}}', 'taz', '1')]
+        commentator = commentators[commentator_full_name]
+        commentator.set_link_to_parent(link)
+        commentator.siman_katan = siman_katan
         text = text.replace(to_replace,
                             '<sup><span class="ajax-block"><a href="#!" class="js-ajax-link" data-ajax-url="{url}">{name}</a></span></sup>'.format(
-                                **commentators[commentator_full_name](link, siman_katan).get_link()))
+                                **commentator.get_link()))
+    # обрабатываем "длинные" ссылки (как в url)
+    # %%в начале главы 106%maran:sha2:siman=106&seif=1%%
+    for to_replace, link_text, commentator_kitzur_name, book, params in re.findall('({0}{0}([^{0}]+){0}([^:]+):([^:]+):([^{0}]+){0}{0})'.format(
+            delimiters),text):
+        # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
+        url = reverse('text_api_request', args = (commentator_kitzur_name, book, params))
+        text = text.replace(to_replace,
+                            '<span class="ajax-block"><a href="#!" class="js-ajax-link" data-ajax-url="{url}">{name}</a></span>'.format(
+                                **{'url': url, 'name': link_text}))
+    # вставляем отрывки из других текстов
+    # %%maran:sha2:siman=106&seif=1%refferer%%
+    for to_replace, commentator_kitzur_name, book, params, refferer in re.findall('({0}{0}([^:]+):([^:]+):([^{0}]+){0}([^{0}]+){0}{0})'.format(
+            delimiters),text):
+        # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
+        quote = get_quote(commentator_kitzur_name, book, params, refferer)
+        text = text.replace(to_replace, '"{}"'.format(quote))
     return text
 
 
@@ -269,6 +312,7 @@ def get_response_by_link(request, link, template, context, add_navigation = True
 
 
 def open_text(request, author, book, params):
+    print(params)
     author = normalize_author(author)
     book = normalize_book(book)
 
@@ -290,7 +334,31 @@ def open_text(request, author, book, params):
                                                                    'header': "{}:{}".format(link.siman, link.seif)}
                                 )
 
+
+def get_quote(author, book, params, refferer):
+    print(params)
+    author = normalize_author(author)
+    book = normalize_book(book)
+
+    link = get_link()
+
+    parser(link, author, book, params)
+    if not link.validate():
+        return HttpResponse("author = {}<p>book = {}<p>params = {}<hr />link = {}<hr />link_errors = {}".format(
+            author, book, params, link, link.errors))
+
+    text = get_text(link)
+    quote = re.findall('\[\[refferer={0}]](.*)\[\[/refferer={0}]]'.format(refferer),text, re.M)
+    if quote:
+        html = htmlizer(quote[0], link)
+        return html
+    return "NOT FOUND"
+
+
 def api_request(request, author, book, params):
+    print('api')
+    print(params)
+
     author = normalize_author(author)
     book = normalize_book(book)
     link = get_link()
@@ -299,15 +367,19 @@ def api_request(request, author, book, params):
         return HttpResponse("author = {}<p>book = {}<p>params = {}<hr />link = {}<hr />link_errors = {}".format(
             author, book, params, link, link.errors))
 
-    # text = get_text(link)
-    # html = htmlizer(text, link)
+    text = get_text(link)
+    html = htmlizer(text, link)
+    author = get_author(author)
+    return  JsonResponse({'title': '{}:{}'.format(author.name,link.short_str()), 'content': html, 'cardColor': author.card_color})
     # return render(request, 'texts/clean_text.html', {
     #     'text':html
     # })
-    return get_response_by_link(request, link, 'texts/clean_text.html', {}, False)
+    # return get_response_by_link(request, link, 'texts/clean_text.html', {}, False)
 
 
 def open_by_siman_and_seif(request, author, book, siman, seif):
+    print('openby')
+
     author = normalize_author(author)
     book = normalize_book(book)
 
