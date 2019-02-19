@@ -226,6 +226,15 @@ def htmlizer(text, link):
         text = text.replace(to_replace,
                             '<sup><span class="ajax-block"><a href="#!" class="js-ajax-link" data-ajax-url="{url}">{name}</a></span></sup>'.format(
                                 **commentator.get_link()))
+
+    # вставляем отрывки из других текстов
+    # %%maran:sha2:siman=106&seif=1%refferer%%
+    for to_replace, commentator_kitzur_name, book, params, refferer in re.findall('({0}{0}([^:{0}]+):([^:{0}]+):([^{0}]+){0}([^{0}:]+){0}{0})'.format(
+            delimiters),text):
+        # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
+        quote = get_quote(commentator_kitzur_name, book, params, refferer)
+        text = text.replace(to_replace, '"{}"'.format(quote))
+
     # обрабатываем "длинные" ссылки (как в url)
     # %%в начале главы 106%maran:sha2:siman=106&seif=1%%
     for to_replace, link_text, commentator_kitzur_name, book, params in re.findall('({0}{0}([^{0}]+){0}([^:]+):([^:]+):([^{0}]+){0}{0})'.format(
@@ -235,13 +244,6 @@ def htmlizer(text, link):
         text = text.replace(to_replace,
                             '<span class="ajax-block"><a href="#!" class="js-ajax-link" data-ajax-url="{url}">{name}</a></span>'.format(
                                 **{'url': url, 'name': link_text}))
-    # вставляем отрывки из других текстов
-    # %%maran:sha2:siman=106&seif=1%refferer%%
-    for to_replace, commentator_kitzur_name, book, params, refferer in re.findall('({0}{0}([^:]+):([^:]+):([^{0}]+){0}([^{0}]+){0}{0})'.format(
-            delimiters),text):
-        # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
-        quote = get_quote(commentator_kitzur_name, book, params, refferer)
-        text = text.replace(to_replace, '"{}"'.format(quote))
     # **текст** как термины
     for term in re.findall('\*\*(.+?)\*\*',text):
         text = text.replace("**{}**".format(term), '<span class="term">{}</span>'.format(term))
