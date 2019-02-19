@@ -6,7 +6,8 @@ from django.shortcuts import render, redirect
 from django.template import loader
 from django.urls import reverse
 import texts.commentators
-import cyrtranslit
+from texts.commentators import normalize_author, normalize_book
+
 from django.http import JsonResponse
 
 TEXTS_PATH = os.path.join(os.getcwd(),'TEXTS_DB')
@@ -15,28 +16,6 @@ TEXTS_PATH = os.path.join(os.getcwd(),'TEXTS_DB')
 def get_author(author):
     author = normalize_author(author)
     return commentators.get(author, texts.commentators.DEFAULT_AUTHOR)()
-
-def normalize_author(author):
-    author = author.lower()
-    author = cyrtranslit.to_latin(author,'ru')
-    author_kitzur = {'taz': 'david_halevi_segal',
-                     'shah': 'shabbatai_hakohen',
-                     'tur': 'jacob_ben_asher',
-                     'hamechaber': 'joseph_karo',
-                     'maran': 'joseph_karo',
-                 }
-    return author_kitzur.get(author, author)
-
-
-def normalize_book(book):
-    book = book.lower()
-    book = cyrtranslit.to_latin(book,'ru')
-    book_kitzur = {'sha1': 'shulchan_aruch_orach_chayim',
-                   'sha2': 'shulchan_aruch_yoreh_deah',
-                   'sha3': 'shulchan_aruch_even_haezer',
-                   'sha4': 'shulchan_aruch_choshen_mishpat',
-                 }
-    return book_kitzur.get(book, book)
 
 
 commentators = {normalize_author('таз'): texts.commentators.Taz,
@@ -106,6 +85,7 @@ class Link:
 
     def set_siman(self, v):
         self.siman = v
+        self.chapter = v
 
     def set_chapter(self, v):
         self.chapter = v
@@ -116,6 +96,7 @@ class Link:
 
     def set_page(self, v):
         self.page = v
+        self.chapter = v
 
     def set_dibur_amathil(self, v):
         self.dibur_amathil = v
@@ -261,6 +242,12 @@ def htmlizer(text, link):
         # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
         quote = get_quote(commentator_kitzur_name, book, params, refferer)
         text = text.replace(to_replace, '"{}"'.format(quote))
+    # **текст** как термины
+    for term in re.findall('\*\*(.+?)\*\*',text):
+        text = text.replace("**{}**".format(term), '<span class="term">{}</span>'.format(term))
+    # ??текст?? как то, что надо доработать
+    for subtext in re.findall('\?\?(.+?)\?\?',text):
+        text = text.replace("??{}??".format(subtext), '<span class="need_work">{}</span>'.format(subtext))
     return text
 
 
@@ -370,7 +357,7 @@ def api_request(request, author, book, params):
     text = get_text(link)
     html = htmlizer(text, link)
     author = get_author(author)
-    return  JsonResponse({'title': '{}:{}'.format(author.name,link.short_str()), 'content': html, 'cardColor': author.card_color})
+    return  JsonResponse({'title': '{}:{}'.format(author.short_name,link.short_str()), 'content': html, 'cardColor': author.card_color})
     # return render(request, 'texts/clean_text.html', {
     #     'text':html
     # })

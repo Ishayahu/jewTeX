@@ -1,5 +1,36 @@
 # -*- coding: utf-8 -*-
 from django.urls import reverse
+import cyrtranslit
+
+author_kitzur = {'taz': 'david_halevi_segal',
+                 'shah': 'shabbatai_hakohen',
+                 'tur': 'jacob_ben_asher',
+                 'hamechaber': 'joseph_karo',
+                 'maran': 'joseph_karo',
+                 }
+
+author2kitzur = {v: k for k, v in author_kitzur.items()}
+
+def normalize_author(author):
+    author = author.lower()
+    author = cyrtranslit.to_latin(author,'ru')
+    return author_kitzur.get(author, author)
+
+def get_short_author_name(author):
+    author = author.lower()
+    author = cyrtranslit.to_latin(author,'ru')
+    return author2kitzur.get(author, author)
+
+
+def normalize_book(book):
+    book = book.lower()
+    book = cyrtranslit.to_latin(book,'ru')
+    book_kitzur = {'sha1': 'shulchan_aruch_orach_chayim',
+                   'sha2': 'shulchan_aruch_yoreh_deah',
+                   'sha3': 'shulchan_aruch_even_haezer',
+                   'sha4': 'shulchan_aruch_choshen_mishpat',
+                 }
+    return book_kitzur.get(book, book)
 
 
 def SHACommentatorsFactory(author, book_template, russian_link_template, card_color):
@@ -22,6 +53,7 @@ def SHACommentatorsFactory(author, book_template, russian_link_template, card_co
             self.siman_katan = None
             self.card_color = card_color
             self.name = author
+            self.short_name = get_short_author_name(author)
 
         def set_link_to_parent(self, link_to_parent):
             self.helek = "_".join(link_to_parent.book.split("_")[-2:])

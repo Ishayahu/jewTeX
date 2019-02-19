@@ -112,3 +112,11 @@ aside {
 .modal.gray {
   background-color: #e2e2e2;
 }
+
+/* by ishayahu*/
+.term{
+  font-style: italic;
+}
+.need_work{
+  background-color: red;
+}
