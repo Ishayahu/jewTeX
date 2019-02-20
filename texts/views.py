@@ -188,8 +188,11 @@ def get_text(link):
     """
     path = link.get_path()
     fullpath = os.path.join(TEXTS_PATH,path)
-    with open("{}.txt".format(fullpath), 'r', encoding = 'utf8') as f:
-        fulltext = f.read()
+    try:
+        with open("{}.txt".format(fullpath), 'r', encoding = 'utf8') as f:
+            fulltext = f.read()
+    except FileNotFoundError:
+        return "??ЕЩЁ НЕ ПЕРЕВЕДЕНО??"
     pattern = link.get_regexp()
     print(pattern)
     result = re.findall(pattern, fulltext, re.DOTALL)
@@ -243,6 +246,10 @@ def htmlizer(text, link):
     # пишет, что %%maran:sha2:siman=106&seif=1%sha2_shah_92_11%%. А РАМО
     # дальше %%в начале главы 109%maran:sha2:siman=109&seif=1%%" [Другими словами
 
+    # убираем [[refferer=sha2_shah_92_11]] и [[/refferer=sha2_shah_92_11]]
+    for to_replace in re.findall('\[\[/?refferer=[a-z_0-9]+]]',text):
+        text = text.replace(to_replace, '')
+
     # вставляем отрывки из других текстов
     # %%maran:sha2:siman=106&seif=1%refferer%%
     for to_replace, commentator_kitzur_name, book, params, refferer in re.findall(
@@ -268,7 +275,8 @@ def htmlizer(text, link):
         text = text.replace("**{}**".format(term), '<span title="{1}" class="term">{0}</span>'.format(term, term_definition))
     # ??текст?? как то, что надо доработать
     for subtext in re.findall('\?\?(.+?)\?\?',text):
-        text = text.replace("??{}??".format(subtext), '<span title="Требуется вставить ссылку" class="need_work">{}</span>'.format(subtext))
+        text = text.replace("??{}??".format(subtext), '<span title="Требуется вставить ссылку/доработать" class="need_work">{}</span>'.format(
+            subtext))
     return text
 
 
