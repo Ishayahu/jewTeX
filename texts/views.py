@@ -7,6 +7,7 @@ from django.template import loader
 from django.urls import reverse
 import texts.commentators
 from texts.commentators import normalize_author, normalize_book
+import cyrtranslit
 
 from django.http import JsonResponse
 
@@ -227,9 +228,25 @@ def htmlizer(text, link):
                             '<sup><span class="ajax-block"><a href="#!" class="js-ajax-link" data-ajax-url="{url}">{name}</a></span></sup>'.format(
                                 **commentator.get_link()))
 
+    # в случае если delimiters = '%'
+    # автор/книга могут содержать только английские буквы в нижнем регистре, цифры и нижнее подчёркивание
+    # название параметра может содержать только английские буквы в нижнем регистре и нижнее подчёркивание
+    # значение параметра может быть любым, но без % и &
+    # название ссылки может содержать только английские буквы в нижнем регистре, цифры и нижнее подчёркивание
+    # (%%([a-z0-9_]+):([a-z0-9_]+):((?:[a-z_]+=[^%&]+&?)+)%([a-z_0-9]+)%%)
+    # длинные ссылки
+    # в качестве текста может быть всё, кроме ||
+    # всё дальше - как выше для цитаты
+    # (%%([^%]+)%([a-z0-9_]+):([a-z0-9_]+):((?:[a-z_]+=[^%&]+&?)+)%%)
+
+    # для теста можно использовать этот текст:
+    # пишет, что %%maran:sha2:siman=106&seif=1%sha2_shah_92_11%%. А РАМО
+    # дальше %%в начале главы 109%maran:sha2:siman=109&seif=1%%" [Другими словами
+
     # вставляем отрывки из других текстов
     # %%maran:sha2:siman=106&seif=1%refferer%%
-    for to_replace, commentator_kitzur_name, book, params, refferer in re.findall('({0}{0}([^:{0}]+):([^:{0}]+):([^{0}]+){0}([^{0}:]+){0}{0})'.format(
+    for to_replace, commentator_kitzur_name, book, params, refferer in re.findall(
+            '({0}{0}([a-z0-9_]+):([a-z0-9_]+):((?:[a-z_]+=[^{0}&]+&?)+){0}([a-z_0-9]+){0}{0})'.format(
             delimiters),text):
         # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
         quote = get_quote(commentator_kitzur_name, book, params, refferer)
@@ -237,7 +254,8 @@ def htmlizer(text, link):
 
     # обрабатываем "длинные" ссылки (как в url)
     # %%в начале главы 106%maran:sha2:siman=106&seif=1%%
-    for to_replace, link_text, commentator_kitzur_name, book, params in re.findall('({0}{0}([^{0}]+){0}([^:]+):([^:]+):([^{0}]+){0}{0})'.format(
+    for to_replace, link_text, commentator_kitzur_name, book, params in re.findall(
+            '({0}{0}([^{0}]+){0}([a-z0-9_]+):([a-z0-9_]+):((?:[a-z_]+=[^{0}&]+&?)+){0}{0})'.format(
             delimiters),text):
         # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
         url = reverse('text_api_request', args = (commentator_kitzur_name, book, params))
@@ -246,15 +264,25 @@ def htmlizer(text, link):
                                 **{'url': url, 'name': link_text}))
     # **текст** как термины
     for term in re.findall('\*\*(.+?)\*\*',text):
-        text = text.replace("**{}**".format(term), '<span class="term">{}</span>'.format(term))
+        term_definition = get_term(term)
+        text = text.replace("**{}**".format(term), '<span title="{1}" class="term">{0}</span>'.format(term, term_definition))
     # ??текст?? как то, что надо доработать
     for subtext in re.findall('\?\?(.+?)\?\?',text):
-        text = text.replace("??{}??".format(subtext), '<span class="need_work">{}</span>'.format(subtext))
+        text = text.replace("??{}??".format(subtext), '<span title="Требуется вставить ссылку" class="need_work">{}</span>'.format(subtext))
     return text
 
 
 
-
+def get_term(term):
+    term = cyrtranslit.to_latin(term,'ru')
+    fullpath = os.path.join(TEXTS_PATH,'TERM_DEFINITIONS',term)
+    try:
+        with open("{}.txt".format(fullpath), 'r', encoding = 'utf8') as f:
+            fulltext = f.read()
+        # fulltext = fulltext.replace('\n','<p>')
+        return fulltext
+    except FileNotFoundError:
+        return "DEFINITION NOT FOUND"
 
 
 
