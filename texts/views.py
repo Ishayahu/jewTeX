@@ -5,8 +5,8 @@ import re
 from django.shortcuts import render, redirect
 from django.template import loader
 from django.urls import reverse
-import texts.commentators
-from texts.commentators import normalize_author, normalize_book
+import texts.authors
+from texts.authors import normalize_author, normalize_book
 import cyrtranslit
 
 from django.http import JsonResponse
@@ -16,13 +16,13 @@ TEXTS_PATH = os.path.join(os.getcwd(),'TEXTS_DB')
 
 def get_author(author):
     author = normalize_author(author)
-    return commentators.get(author, texts.commentators.DEFAULT_AUTHOR)()
+    return authors.get(author, texts.authors.DEFAULT_AUTHOR)()
 
 
-commentators = {normalize_author('таз'): texts.commentators.Taz,
-                normalize_author('шах'): texts.commentators.Shah,
-                normalize_author('смак'): texts.commentators.Smak,
-                }
+authors = {normalize_author('таз'): texts.authors.Taz,
+           normalize_author('шах'): texts.authors.Shah,
+           normalize_author('смак'): texts.authors.Smak,
+           }
 
 
 def parser(link, author, book, params):
@@ -228,17 +228,17 @@ def htmlizer(text, link):
         text = text.replace(to_replace,"<div class='{}'>".format(tag) if not closing_tag else "</div>")
 
     # обрабатываем "короткие" ссылки {{taz/1}} на ссылки /api/text/taz/taz_al_yore_dea/siman=92&siman_katan=1/
-    for to_replace, commentator_kitzur_name, siman_katan in re.findall('({0}{0}([^/]+)/([^{0}]+){0}{0})'.format(delimiters),text):
+    for to_replace, author_kitzur_name, siman_katan in re.findall('({0}{0}([^/]+)/([^{0}]+){0}{0})'.format(delimiters),text):
         # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
-        # commentator_full_name = author_kitzur[commentator_kitzur_name]
-        commentator_full_name = normalize_author(commentator_kitzur_name)
+        # author_full_name = author_kitzur[author_kitzur_name]
+        author_full_name = normalize_author(author_kitzur_name)
         # [('{{taz/1}}', 'taz', '1')]
-        commentator = commentators[commentator_full_name]()
-        commentator.set_link_to_parent(link)
-        commentator.siman_katan = siman_katan
+        author = authors[author_full_name]()
+        author.set_link_to_parent(link)
+        author.siman_katan = siman_katan
         text = text.replace(to_replace,
                             '<sup><span class="ajax-block"><a href="#!" class="js-ajax-link" data-ajax-url="{url}">{name}</a></span></sup>'.format(
-                                **commentator.get_link()))
+                                **author.get_link()))
 
     # в случае если delimiters = '%'
     # автор/книга могут содержать только английские буквы в нижнем регистре, цифры и нижнее подчёркивание
@@ -255,26 +255,29 @@ def htmlizer(text, link):
     # пишет, что %%maran:sha2:siman=106&seif=1%sha2_shah_92_11%%. А РАМО
     # дальше %%в начале главы 109%maran:sha2:siman=109&seif=1%%" [Другими словами
 
+    # убираем разметку, которая нам тут не нужна
+    for markdown in re.findall(r'\[\[[^]]+]]',text,re.M):
+        text = text.replace(markdown, '')
     # убираем [[refferer=sha2_shah_92_11]] и [[/refferer=sha2_shah_92_11]]
-    for to_replace in re.findall('\[\[/?refferer=[a-z_0-9]+]]',text):
-        text = text.replace(to_replace, '')
+    # for to_replace in re.findall('\[\[/?refferer=[a-z_0-9]+]]',text):
+    #     text = text.replace(to_replace, '')
 
     # вставляем отрывки из других текстов
     # %%maran:sha2:siman=106&seif=1%refferer%%
-    for to_replace, commentator_kitzur_name, book, params, refferer in re.findall(
+    for to_replace, author_kitzur_name, book, params, refferer in re.findall(
             '({0}{0}([a-z0-9_]+):([a-z0-9_]+):((?:[a-z_]+=[^{0}&]+&?)+){0}([a-z_0-9]+){0}{0})'.format(
             delimiters),text):
         # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
-        quote = get_quote(commentator_kitzur_name, book, params, refferer)
+        quote = get_quote(author_kitzur_name, book, params, refferer)
         text = text.replace(to_replace, '"{}"'.format(quote))
 
     # обрабатываем "длинные" ссылки (как в url)
     # %%в начале главы 106%maran:sha2:siman=106&seif=1%%
-    for to_replace, link_text, commentator_kitzur_name, book, params in re.findall(
+    for to_replace, link_text, author_kitzur_name, book, params in re.findall(
             '({0}{0}([^{0}]+){0}([a-z0-9_]+):([a-z0-9_]+):((?:[a-z_]+=[^{0}&]+&?)+){0}{0})'.format(
             delimiters),text):
         # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
-        url = reverse('text_api_request', args = (commentator_kitzur_name, book, params))
+        url = reverse('text_api_request', args = (author_kitzur_name, book, params))
         text = text.replace(to_replace,
                             '<span class="ajax-block"><a href="#!" class="js-ajax-link" data-ajax-url="{url}">{name}</a></span>'.format(
                                 **{'url': url, 'name': link_text}))
@@ -306,8 +309,19 @@ def get_term(term):
 def get_response_by_link(request, link, template, context, add_navigation = True):
     # TODO пока работает только с числами
     text = get_text(link)
+    # for openGraph
+    context['description'] = "{}...".format(text[:50])
+    context['title'] = "{}: {}".format(link.author,context.get('header',''))
+    # TODO
+    context['pulished_time'] = "{}".format("pulished_time")
+    context['url'] = "{}".format("GET URL")
+
+
     html = htmlizer(text, link)
     context['text'] = html
+
+
+
     if add_navigation:
         context['up'] = reverse('book', kwargs={'author': link.author, 'book': link.book})
         content = get_book_content(link.author, link.book)

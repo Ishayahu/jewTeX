@@ -12,10 +12,12 @@ author_kitzur = {'taz': 'david_halevi_segal',
 
 author2kitzur = {v: k for k, v in author_kitzur.items()}
 
+
 def normalize_author(author):
     author = author.lower()
     author = cyrtranslit.to_latin(author,'ru')
     return author_kitzur.get(author, author)
+
 
 def get_short_author_name(author):
     author = author.lower()
@@ -71,11 +73,42 @@ def SHACommentatorsFactory(author, book_template, russian_link_template, card_co
                     'name': russian_link_template.format(self.siman_katan)}
 
     return Commentator
+
+def AuthorsFactory(author, card_color):
+    class Author:
+        def __init__ (self):
+            """
+
+            :param link_to_parent: Link
+            :param siman_katan: str
+            """
+            self.name = author
+            self.short_name = get_short_author_name(author)
+            self.books = []
+            self.card_color = card_color
+
+        # нужно только для коротких ссылок
+        # def set_link_to_parent(self, link_to_parent):
+        #     self.helek = "_".join(link_to_parent.book.split("_")[-2:])
+        #     self.siman = link_to_parent.siman
+
+        def __str__(self):
+            return "{}({})".format(self.name, self.card_color)
+        def __repr__(self):
+            return str(self)
+        def get_link (self):
+            return {'url': reverse('author', kwargs = {'author': self.name})}
+
+    return Author
+
+
+
 # пока доступные варианты классов карточек red, blue, green, yellow, purple, gray
 Taz = SHACommentatorsFactory('david_halevi_segal', 'taz_al_{}', 'ТАЗ-{}', 'red')
 Shah = SHACommentatorsFactory('shabbatai_hakohen', 'shah_al_{}', 'ШАХ-{}', 'blue')
-Smak = SHACommentatorsFactory('isaac_ben_joseph_of_corbeil', '', '', 'yellow')
-DEFAULT_AUTHOR = SHACommentatorsFactory('noname', 'noname_{}', 'noname-{}', 'gray')
+
+Smak = AuthorsFactory('isaac_ben_joseph_of_corbeil', 'yellow')
+DEFAULT_AUTHOR = AuthorsFactory('noname', 'gray')
 
 # class Taz:
 #     def __init__(self, link_to_parent, siman_katan):
