@@ -20,7 +20,9 @@ def get_author(author):
 
 
 commentators = {normalize_author('таз'): texts.commentators.Taz,
-                normalize_author('шах'): texts.commentators.Shah}
+                normalize_author('шах'): texts.commentators.Shah,
+                normalize_author('смак'): texts.commentators.Smak,
+                }
 
 
 def parser(link, author, book, params):
@@ -61,6 +63,8 @@ class Link:
         #TODO надо сделать API для получения id referrer'a
         self.referrerer = None
         self.errors = []
+
+        self.in_file = ['siman_katan','page','seif','dibur_amathil']
 
     def add_by_key_value(self,k,v):
         if k=='chapter':
@@ -139,37 +143,42 @@ class Link:
         return os.path.join(*list(map(str,(self.author, self.book, filename))))
 
     def get_regexp(self):
-        r = '.*'
-        # TODO надо подумать над ним, но пока оставлю так, потому что ещё не ясно, какие варианты могут быть
-        if self.siman_katan:
-            r += r"\[\[siman_katan={}]].*?".format(self.siman_katan)
-        if self.seif:
-            r += r"\[\[seif={}]].*?".format(self.seif)
-        if self.page:
-            r += r"\[\[page={}]].*?".format(self.page)
-        if self.dibur_amathil:
-            r += r"\[\[dibur_amathil={}]].*?".format(self.dibur_amathil)
-        # Добавляем содержимое
-        r += "(.*?)"
-        # if self.referrerer:
-        #     r += r"\[\[/{}]]".format(self.referrerer)
-        # else:
-        #     r += r"\[\["
+        # если есть что-то, что ищем в файле
+        if any([self.__getattribute__(_) for _ in self.in_file]):
+            r = '.*'
+            # TODO надо подумать над ним, но пока оставлю так, потому что ещё не ясно, какие варианты могут быть
+            if self.siman_katan:
+                r += r"\[\[siman_katan={}]].*?".format(self.siman_katan)
+            if self.seif:
+                r += r"\[\[seif={}]].*?".format(self.seif)
+            if self.page:
+                r += r"\[\[page={}]].*?".format(self.page)
+            if self.dibur_amathil:
+                r += r"\[\[dibur_amathil={}]].*?".format(self.dibur_amathil)
+            # Добавляем содержимое
+            r += "(.*?)"
+            # if self.referrerer:
+            #     r += r"\[\[/{}]]".format(self.referrerer)
+            # else:
+            #     r += r"\[\["
 
-        # до следующего такого же
-        if self.siman_katan:
-            r += r"(?:\[\[siman_katan=.*|\[\[$)"
-        if self.seif:
-            r += r"(?:\[\[seif=|\[\[$)"
-        if self.page:
-            r += r"(?:\[\[page=|\[\[$)"
-        if self.dibur_amathil:
-            r += r"(?:\[\[dibur_amathil=|\[\[$)"
+            # до следующего такого же
+            if self.siman_katan:
+                r += r"(?:\[\[siman_katan=.*|\[\[$)"
+            if self.seif:
+                r += r"(?:\[\[seif=|\[\[$)"
+            if self.page:
+                r += r"(?:\[\[page=|\[\[$)"
+            if self.dibur_amathil:
+                r += r"(?:\[\[dibur_amathil=|\[\[$)"
 
 
 
-        # r += ".*"
-        return r
+            # r += ".*"
+            return r
+        # если ничего такого нет и надо вернуть текст всего файла
+        else:
+            return r"(.+)"
 
 
 def get_link():

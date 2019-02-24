@@ -7,6 +7,7 @@ author_kitzur = {'taz': 'david_halevi_segal',
                  'tur': 'jacob_ben_asher',
                  'hamechaber': 'joseph_karo',
                  'maran': 'joseph_karo',
+                 'smak': 'isaac_ben_joseph_of_corbeil',
                  }
 
 author2kitzur = {v: k for k, v in author_kitzur.items()}
@@ -29,6 +30,7 @@ def normalize_book(book):
                    'sha2': 'shulchan_aruch_yoreh_deah',
                    'sha3': 'shulchan_aruch_even_haezer',
                    'sha4': 'shulchan_aruch_choshen_mishpat',
+                   'smak': 'sefer_mitzvot_katan',
                  }
     return book_kitzur.get(book, book)
 
@@ -72,6 +74,7 @@ def SHACommentatorsFactory(author, book_template, russian_link_template, card_co
 # пока доступные варианты классов карточек red, blue, green, yellow, purple, gray
 Taz = SHACommentatorsFactory('david_halevi_segal', 'taz_al_{}', 'ТАЗ-{}', 'red')
 Shah = SHACommentatorsFactory('shabbatai_hakohen', 'shah_al_{}', 'ШАХ-{}', 'blue')
+Smak = SHACommentatorsFactory('isaac_ben_joseph_of_corbeil', '', '', 'yellow')
 DEFAULT_AUTHOR = SHACommentatorsFactory('noname', 'noname_{}', 'noname-{}', 'gray')
 
 # class Taz:
