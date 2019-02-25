@@ -108,6 +108,7 @@ Taz = SHACommentatorsFactory('david_halevi_segal', 'taz_al_{}', 'ТАЗ-{}', 're
 Shah = SHACommentatorsFactory('shabbatai_hakohen', 'shah_al_{}', 'ШАХ-{}', 'blue')
 
 Smak = AuthorsFactory('isaac_ben_joseph_of_corbeil', 'yellow')
+Isur_vheyter_harokh = AuthorsFactory('isur_vheyter_harokh', 'yellow')
 DEFAULT_AUTHOR = AuthorsFactory('noname', 'gray')
 
 # class Taz:

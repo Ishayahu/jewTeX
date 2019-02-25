@@ -22,6 +22,7 @@ def get_author(author):
 authors = {normalize_author('таз'): texts.authors.Taz,
            normalize_author('шах'): texts.authors.Shah,
            normalize_author('смак'): texts.authors.Smak,
+           'isur_vheyter_harokh': texts.authors.Isur_vheyter_harokh,
            }
 
 
@@ -55,8 +56,10 @@ class Link:
         self.book = None
         self.siman = None
         self.chapter = None
+        self.klal = None
         self.sub_chapter = None
         self.seif = None
+        self.din = None
         self.page = None
         self.dibur_amathil = None
         self.siman_katan = None
@@ -73,6 +76,8 @@ class Link:
             self.set_siman(v)
         elif k=='seif':
             self.set_seif(v)
+        elif k=='klal':
+            self.set_klal(v)
         elif k=='page':
             self.set_page(v)
         elif k=='dibur_amathil':
@@ -81,6 +86,8 @@ class Link:
             self.set_siman_katan(v)
         elif k=='referrerer':
             self.set_referrerer(v)
+        elif k=='din':
+            self.set_din(v)
 
     def set_author(self, v):
         self.author = v
@@ -92,11 +99,19 @@ class Link:
         self.siman = v
         self.chapter = v
 
+    def set_klal(self, v):
+        self.klal = v
+        self.chapter = v
+
     def set_chapter(self, v):
         self.chapter = v
 
     def set_seif(self, v):
         self.seif = v
+        self.sub_chapter = v
+
+    def set_din(self, v):
+        self.din = v
         self.sub_chapter = v
 
     def set_page(self, v):
@@ -118,11 +133,11 @@ class Link:
         return "{}:{}".format(self.chapter, self.sub_chapter)
 
     def __str__(self):
-        return """{}:{} глава {} симан {}<p>
-        сеиф {} страница {} дибур аматхиль {} симан катан {}<p>
+        return """{}:{} глава {} симан {} клаль {}<p>
+        сеиф {} страница {} дибур аматхиль {} симан катан {} дин {}<p>
         кто ссылался {}""".format(
-            self.author, self.book, self.chapter, self.siman, self.seif, self.page, self.dibur_amathil,
-            self.siman_katan, self.referrerer)
+            self.author, self.book, self.chapter, self.siman, self.klal, self.seif, self.page, self.dibur_amathil,
+            self.siman_katan, self.din, self.referrerer)
 
     def __repr__(self):
         return self.__str__()
@@ -153,6 +168,8 @@ class Link:
                 r += r"\[\[seif={}]].*?".format(self.seif)
             if self.page:
                 r += r"\[\[page={}]].*?".format(self.page)
+            if self.din:
+                r += r"\[\[din={}]].*?".format(self.page)
             if self.dibur_amathil:
                 r += r"\[\[dibur_amathil={}]].*?".format(self.dibur_amathil)
             # Добавляем содержимое
@@ -169,6 +186,8 @@ class Link:
                 r += r"(?:\[\[seif=|\[\[$)"
             if self.page:
                 r += r"(?:\[\[page=|\[\[$)"
+            if self.din:
+                r += r"(?:\[\[din=|\[\[$)"
             if self.dibur_amathil:
                 r += r"(?:\[\[dibur_amathil=|\[\[$)"
 
@@ -291,6 +310,73 @@ def htmlizer(text, link):
             subtext))
     return text
 
+def demarking(text, link):
+    """
+    Делаем из текста html. link - ссылка на запрос основной страницы, чтобы из контекста понять, какой комментарий нам нужен, например,
+    раши на брейшис или шмойс
+    :param text: str
+    :param link: Link
+    :return: str
+    """
+    delimiters = '%'
+    text = text.replace('\n','<p>')
+    # убираем все <ramo>
+    for to_replace in re.findall(r'(</?[^/>]+>)',text):
+        text = text.replace(to_replace,"")
+
+    # удаляем "короткие" ссылки {{taz/1}}
+    for to_replace in re.findall('({0}{0}[^/]+/[^{0}]+{0}{0})'.format(delimiters),text):
+        text = text.replace(to_replace,'')
+
+    # в случае если delimiters = '%'
+    # автор/книга могут содержать только английские буквы в нижнем регистре, цифры и нижнее подчёркивание
+    # название параметра может содержать только английские буквы в нижнем регистре и нижнее подчёркивание
+    # значение параметра может быть любым, но без % и &
+    # название ссылки может содержать только английские буквы в нижнем регистре, цифры и нижнее подчёркивание
+    # (%%([a-z0-9_]+):([a-z0-9_]+):((?:[a-z_]+=[^%&]+&?)+)%([a-z_0-9]+)%%)
+    # длинные ссылки
+    # в качестве текста может быть всё, кроме ||
+    # всё дальше - как выше для цитаты
+    # (%%([^%]+)%([a-z0-9_]+):([a-z0-9_]+):((?:[a-z_]+=[^%&]+&?)+)%%)
+
+    # для теста можно использовать этот текст:
+    # пишет, что %%maran:sha2:siman=106&seif=1%sha2_shah_92_11%%. А РАМО
+    # дальше %%в начале главы 109%maran:sha2:siman=109&seif=1%%" [Другими словами
+
+    # убираем разметку, которая нам тут не нужна
+    for markdown in re.findall(r'\[\[[^]]+]]',text,re.M):
+        text = text.replace(markdown, '')
+    # убираем [[refferer=sha2_shah_92_11]] и [[/refferer=sha2_shah_92_11]]
+    # for to_replace in re.findall('\[\[/?refferer=[a-z_0-9]+]]',text):
+    #     text = text.replace(to_replace, '')
+
+    # вставляем отрывки из других текстов
+    # %%maran:sha2:siman=106&seif=1%refferer%%
+    for to_replace, author_kitzur_name, book, params, refferer in re.findall(
+            '({0}{0}([a-z0-9_]+):([a-z0-9_]+):((?:[a-z_]+=[^{0}&]+&?)+){0}([a-z_0-9]+){0}{0})'.format(
+            delimiters),text):
+        # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
+        quote = get_quote(author_kitzur_name, book, params, refferer)
+        text = text.replace(to_replace, '"{}"'.format(quote))
+
+    # обрабатываем "длинные" ссылки (как в url)
+    # %%в начале главы 106%maran:sha2:siman=106&seif=1%%
+    for to_replace, link_text, author_kitzur_name, book, params in re.findall(
+            '({0}{0}([^{0}]+){0}([a-z0-9_]+):([a-z0-9_]+):((?:[a-z_]+=[^{0}&]+&?)+){0}{0})'.format(
+            delimiters),text):
+        # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
+        # url = reverse('text_api_request', args = (author_kitzur_name, book, params))
+        text = text.replace(to_replace, link_text)
+    # **текст** как термины
+    for term in re.findall('\*\*(.+?)\*\*',text):
+        term_definition = get_term(term)
+        text = text.replace("**{}**".format(term), '{0}'.format(term, term_definition))
+    # ??текст?? как то, что надо доработать
+    for subtext in re.findall('\?\?(.+?)\?\?',text):
+        text = text.replace("??{}??".format(subtext), '{}'.format(
+            subtext))
+    return text
+
 
 
 def get_term(term):
@@ -310,10 +396,12 @@ def get_response_by_link(request, link, template, context, add_navigation = True
     # TODO пока работает только с числами
     text = get_text(link)
     # for openGraph
-    context['description'] = "{}...".format(text[:50])
+    # TODO тут нужен текст без разметки
+    # TODO тут можно кусок текста побольше
+    context['description'] = "{}...".format(demarking(text,link)[:200])
     context['title'] = "{}: {}".format(link.author,context.get('header',''))
     # TODO
-    context['pulished_time'] = "{}".format("pulished_time")
+    context['pulished_time'] = "{}".format("GET pulished_time")
     context['url'] = "{}".format("GET URL")
 
 
@@ -328,7 +416,11 @@ def get_response_by_link(request, link, template, context, add_navigation = True
         context['prev'] = None
         context['next'] = None
         cur_chapter_idx = content.chapter_idx(link.siman)
-        cur_seif_idx = content.chapters[cur_chapter_idx].seifim.index(str(link.seif))
+        try:
+            # TODO это на то время, пока нет нормального класса хранилища и содержание работает только для книг с симан/сеиф
+            cur_seif_idx = content.chapters[cur_chapter_idx].seifim.index(str(link.seif))
+        except ValueError:
+            return render(request, template, context)
         seif_count = len( content.chapters[cur_chapter_idx].seifim)
         if cur_seif_idx+1 < seif_count:
             context['next'] = reverse('open_by_siman_seif', kwargs={'author': link.author,
@@ -488,6 +580,7 @@ def get_book_content(author, book):
     :param request:
     :return: str
     """
+    # TODO надо чтобы это работало и для книг не симан/сеиф. требуется переработка глобальная
     class Chapter:
         def __init__(self, name):
             self.seifim = []
