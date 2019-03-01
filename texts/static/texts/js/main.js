@@ -21,8 +21,15 @@
               <span class="modal-close">X</span>
             </div>
             <div class="modal-body">
-              <div class="modal-content">
-                <em>Loading...</em>
+              <div class="layer">
+                <div class="modal-content">
+                  <em>Loading...</em>
+                </div>
+                <div class="modal-expand-x js-resize-x"></div>
+              </div>
+              <div class="layer">
+                <div class="modal-expand-y js-resize-y"></div>
+                <div class="_empty"></div>
               </div>
             </div>`;
     
@@ -51,6 +58,8 @@
     
           var body = elem.getElementsByClassName('modal-content')[0];
           var dragPanel = elem.getElementsByClassName('modal-dragPanel')[0];
+          var resizeX = elem.querySelector('.js-resize-x');
+          var resizeY = elem.querySelector('.js-resize-y');
     
           // get data info
           ajaxUrl = target.dataset['ajaxUrl'];
@@ -118,7 +127,8 @@
                 asides.forEach(function (target) {
     
                   if (target.classList.contains('active')) {
-                    elem.removeAttribute('style')
+                    elem.style.top = '0px';
+                    elem.style.left = '0px';
                     elem.style.position = 'relative';
                     elem.style.zIndex = '10';
                     var contentElem = target.getElementsByClassName('content')[0];
@@ -143,9 +153,32 @@
                 aside.classList.remove('active');
                 aside.removeAttribute('style');
               }
-    
+
+            } else if (e.target === resizeX) {
+              window.onmousemove = function (e) {
+                e.cancelBubble = true;
+                if (e.stopPropagation) e.stopPropagation();
+                window.getSelection().collapseToStart();
+                elem.style.width = (e.pageX - elem.getBoundingClientRect().left) + 'px';
+                body.style.width = (e.pageX - elem.getBoundingClientRect().left - 5) + 'px';
+                resizeY.style.width = (e.pageX - elem.getBoundingClientRect().left - 5) + 'px';
+              }
+              window.onmouseup = function (e) {
+                window.onmousemove = null;
+              }
+            } else if (e.target === resizeY) {
+              window.onmousemove = function (e) {
+                e.cancelBubble = true;
+                if (e.stopPropagation) e.stopPropagation();
+                window.getSelection().collapseToStart();
+                elem.style.height = (e.clientY - elem.getBoundingClientRect().top) + 'px';
+                body.style.height = (e.clientY - elem.getBoundingClientRect().top - 70) + 'px';
+              }
+              window.onmouseup = function (e) {
+                window.onmousemove = null;
+              }
             }
-    
+
           }
     
         })
