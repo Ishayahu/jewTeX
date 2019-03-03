@@ -42,7 +42,8 @@
     
           // calculate coords for modal position
           var elem_top = e.pageY - 220,
-              elem_left = left - 200 + (right - left)/2;
+              elem_left = left - 200 + (right - left)/2,
+              elem_right = elem_left + 300;
     
           // apply position values
           if (e.clientY < 220) {
@@ -50,7 +51,13 @@
           } else {
             elem.style.top = elem_top + 'px';
           }
-          elem.style.left = elem_left + 'px';
+          if (elem_left < 0) {
+            elem.style.left = '10px';
+          } else if (elem_right > window.outerWidth) {
+            elem.style.right = '10px';
+          } else {
+            elem.style.left = elem_left + 'px';
+          }
     
           // insert modal into DOM
           var parent = document.querySelector('.cardStorage');
@@ -78,12 +85,22 @@
             var parent = elem.parentElement;
             parent.removeChild(elem);
           })
-    
-          elem.onmousedown = function(e) {
+
+          elem.onmousedown = function (e) {
+            dragElem(e)
+          }
+          elem.ontouchstart = function (e) {
+            dragElem(e.changedTouches[0])
+          };
+  
+          function dragElem(e) {
     
             var dragPanel = elem.getElementsByClassName('modal-dragPanel')[0];
             var dragPanelCoords = dragPanel.getBoundingClientRect();
-    
+
+            var offsetY = e.pageY - elem.offsetTop;
+            var offsetX = e.pageX - elem.offsetLeft;
+
             if (e.clientX > dragPanelCoords.left && 
                 e.clientX < dragPanelCoords.right && 
                 e.clientY > dragPanelCoords.top && 
@@ -96,9 +113,9 @@
               elem.style.zIndex = 1000; 
             
               function moveAt(e) {
-    
-                elem.style.left = e.pageX - elem.offsetWidth / 2 + 'px';
-                elem.style.top = e.pageY - elem.offsetHeight / 2 + 'px';
+
+                elem.style.left = (e.pageX - offsetX) + 'px';
+                elem.style.top = (e.pageY - offsetY) + 'px';
     
                 var asides = Array.from(document.getElementsByTagName('aside'));
                 asides.forEach(function (aside) {
@@ -120,9 +137,18 @@
                 moveAt(e);
               }
             
-              elem.onmouseup = function() {
+              document.ontouchmove = function(e) {
+                moveAt(e.changedTouches[0]);
+              }
+            
+              elem.onmouseup = endDragging
+              elem.ontouchend = endDragging
+              
+              function endDragging (e) {
                 document.onmousemove = null;
+                document.ontouchmove = null;
                 elem.onmouseup = null;
+                elem.ontouchend = null;
     
                 asides.forEach(function (target) {
     
@@ -171,8 +197,8 @@
                 e.cancelBubble = true;
                 if (e.stopPropagation) e.stopPropagation();
                 window.getSelection().collapseToStart();
-                elem.style.height = (e.clientY - elem.getBoundingClientRect().top) + 'px';
-                body.style.height = (e.clientY - elem.getBoundingClientRect().top - 70) + 'px';
+                elem.style.height = (e.pageY - elem.offsetTop) + 'px';
+                body.style.height = (e.pageY - elem.offsetTop - 70) + 'px';
               }
               window.onmouseup = function (e) {
                 window.onmousemove = null;
