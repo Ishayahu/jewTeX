@@ -98,8 +98,10 @@ def get_author(author_name):
 
 
 class Author:
-    author_name: AuthorName = None
-    css_class_name: str = None
+    author_name = None  # type: AuthorName
+    css_class_name = None  # type: str
+    # author_name: AuthorName = None
+    # css_class_name: str = None
 
 
 class __Taz(Author):

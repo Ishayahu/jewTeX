@@ -188,7 +188,8 @@ def open_text(request, author, book, chapter_name, params):
     print(params)
     author_name = AuthorName(author)
     book = Book(book, author_name)
-    book_TOC: Content = s.get_book_TOC(book)
+    # book_TOC: Content = s.get_book_TOC(book)
+    book_TOC = s.get_book_TOC(book) # type:  Content
 
     link = Link()
     link.set_author_name(author_name)

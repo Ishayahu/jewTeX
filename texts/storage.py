@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import List, Optional, Callable, ClassVar
+# from typing import List, Optional, Callable, ClassVar
 from texts.biblio import AuthorName, Book
 import texts.biblio
 import cyrtranslit
@@ -28,19 +28,19 @@ class Link:
 
     def __init__(self):
 
-        self.author_name: AuthorName = None
-        self.book: Book = None
-        self.chapter_name: str = None
-        self.errors: list = []
-        self.params: str = None
-        # self.siman = None
-        # self.klal = None
-        # self.seif = None
-        # self.din = None
-        # self.page = None
-        # self.dibur_amathil = None
-        # self.siman_katan = None
-        # self.referrerer = None
+        self.author_name = None  # type: AuthorName
+        self.book = None  # type: Book
+        self.chapter_name = None  # type: str
+        self.errors = []  # type: list
+        self.params = None  # type: str
+
+        # self.author_name: AuthorName = None
+        # self.book: Book = None
+        # self.chapter_name: str = None
+        # self.errors: list = []
+        # self.params: str = None
+
+
 
         self.accepted_param_names = ['siman', 'klal', 'seif', 'din', 'page', 'dibur_amathil', 'siman_katan', 'referrerer']
         self.fs_level_param_names = ['siman', 'klal', 'page', ]
@@ -70,7 +70,8 @@ class Link:
         """
         return os.path.join(*list(map(str, (self.author_name.full_name, self.book.full_name, self.chapter_name))))
 
-    def get_subchapter(self) -> ClassVar:
+    # def get_subchapter(self) -> ClassVar:
+    def get_subchapter(self):
         class SubC:
             name = None
             type = None
@@ -123,9 +124,12 @@ class Link:
 
 class _Subchapter:
     def __init__(self, subchapter_name: str, subchapter_type: str):
-        self.name: str = subchapter_name
-        self.type: str = subchapter_type
-        self.chapter: _Chapter = None
+        self.name = subchapter_name  # type: str
+        self.type = subchapter_type  # type: str
+        self.chapter = None  # type: _Chapter
+        # self.name: str = subchapter_name
+        # self.type: str = subchapter_type
+        # self.chapter: _Chapter = None
 
     def __repr__(self):
         return self.__str__()
@@ -142,8 +146,10 @@ class _Subchapter:
 
 class _Chapter:
     def __init__(self, name: str, idx: int = None):
-        self.subchapters: List[_Subchapter] = []
-        self.name: str = name
+        self.subchapters = []  # type: List[_Subchapter]
+        self.name = name  # type: str
+        # self.subchapters: List[_Subchapter] = []
+        # self.name: str = name
         if not idx:
             self.idx = int(name)
         else:
@@ -175,7 +181,8 @@ class Content:
 
     def __init__(self):
         self.chapters = []
-        self.current_place: Link = None
+        self.current_place = None  # type: Link
+        # self.current_place: Link = None
 
     def add_chapter(self, chapter_name):
         self.chapters.append(chapter_name)
@@ -184,7 +191,8 @@ class Content:
     def set_current_place(self, link: Link):
         self.current_place = link
 
-    def next_chapter_link(self) -> Optional[str]:
+    # def next_chapter_link(self) -> Optional[str]:
+    def next_chapter_link(self):
         """
         Ссылка на следующую главу, если есть
         """
@@ -199,7 +207,8 @@ class Content:
                                self.chapters[current_chapter_idx + 1].subchapters[0].name)
             ])
 
-    def prev_chapter_link(self) -> Optional[str]:
+    # def prev_chapter_link(self) -> Optional[str]:
+    def prev_chapter_link(self):
         """
         Ссылка на предыдущую главу, если есть
         """
@@ -214,7 +223,8 @@ class Content:
                                self.chapters[current_chapter_idx - 1].subchapters[0].name)
             ])
 
-    def next_subchapter_link(self) -> Optional[str]:
+    # def next_subchapter_link(self) -> Optional[str]:
+    def next_subchapter_link(self):
         """
         Ссылка на следующий раздел главы, если есть, или на следующую главу
         """
@@ -238,7 +248,8 @@ class Content:
             # можем ли перйти к след. главе
             return self.next_chapter_link()
 
-    def prev_subchapter_link(self) -> Optional[str]:
+    # def prev_subchapter_link(self) -> Optional[str]:
+    def prev_subchapter_link(self):
         """
         Ссылка на предыдущий раздел главы, если есть, или на предыдущую главу
         """
@@ -290,7 +301,8 @@ class Storage:
         if self.texts_path:
             self.fields2chapters = _FilseStorage()
 
-    def __getattr__(self, item: str) -> Callable:
+    # def __getattr__(self, item: str) -> Callable:
+    def __getattr__(self, item: str):
         if self.texts_path:
             return {
                 'get_authors': self.__file_get_authors,
@@ -300,13 +312,15 @@ class Storage:
                 'get_term': self.__file_get_term,
             }[item]
 
-    def __file_get_authors(self) -> List[AuthorName]:
+    # def __file_get_authors(self) -> List[AuthorName]:
+    def __file_get_authors(self):
         """
         Возвращает список авторов, чьи книги доступны
         """
         return [AuthorName(full_name) for full_name in os.listdir(self.texts_path) if not full_name.startswith('.')]
 
-    def __file_get_books_for_author(self, author: AuthorName) -> List[Book]:
+    # def __file_get_books_for_author(self, author: AuthorName) -> List[Book]:
+    def __file_get_books_for_author(self, author: AuthorName):
         """
         Возвращает список книг для автора
         """
