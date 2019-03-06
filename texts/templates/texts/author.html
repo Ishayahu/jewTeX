@@ -3,7 +3,7 @@
 <body>
     <ul>
         {% for book in books %}
-            <li><a href="{% url 'book' author book %}">{{ book }}</a></li>
+            <li><a href="{% url 'book' author.full_name book.full_name %}">{{ book }}</a></li>
         {% endfor %}
     </ul>
 

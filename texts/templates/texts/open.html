@@ -52,11 +52,14 @@
         <div class="content"></div>
       </aside>
     </section>
-        {% if prev %}
-      <a href="{{ prev }}">Назад</a>
+
+
+
+    {% if prev %}
+        <div style="float:left;"><a href="{{ prev }}">Назад</a></div>
     {% endif %}
     {% if next %}
-      <a href="{{ next }}">Вперёд</a>
+        <div style="float:right"><a href="{{ next }}">Вперёд</a></div>
     {% endif %}
 
     <footer>
