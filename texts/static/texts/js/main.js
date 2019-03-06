@@ -21,8 +21,15 @@
               <span class="modal-close">X</span>
             </div>
             <div class="modal-body">
-              <div class="modal-content">
-                <em>Loading...</em>
+              <div class="layer">
+                <div class="modal-content">
+                  <em>Loading...</em>
+                </div>
+                <div class="modal-expand-x js-resize-x"></div>
+              </div>
+              <div class="layer">
+                <div class="modal-expand-y js-resize-y"></div>
+                <div class="_empty"></div>
               </div>
             </div>`;
     
@@ -35,7 +42,8 @@
     
           // calculate coords for modal position
           var elem_top = e.pageY - 220,
-              elem_left = left - 200 + (right - left)/2;
+              elem_left = left - 200 + (right - left)/2,
+              elem_right = elem_left + 300;
     
           // apply position values
           if (e.clientY < 220) {
@@ -43,7 +51,13 @@
           } else {
             elem.style.top = elem_top + 'px';
           }
-          elem.style.left = elem_left + 'px';
+          if (elem_left < 0) {
+            elem.style.left = '10px';
+          } else if (elem_right > window.outerWidth) {
+            elem.style.right = '10px';
+          } else {
+            elem.style.left = elem_left + 'px';
+          }
     
           // insert modal into DOM
           var parent = document.querySelector('.cardStorage');
@@ -51,6 +65,8 @@
     
           var body = elem.getElementsByClassName('modal-content')[0];
           var dragPanel = elem.getElementsByClassName('modal-dragPanel')[0];
+          var resizeX = elem.querySelector('.js-resize-x');
+          var resizeY = elem.querySelector('.js-resize-y');
     
           // get data info
           ajaxUrl = target.dataset['ajaxUrl'];
@@ -69,12 +85,22 @@
             var parent = elem.parentElement;
             parent.removeChild(elem);
           })
-    
-          elem.onmousedown = function(e) {
+
+          elem.onmousedown = function (e) {
+            dragElem(e)
+          }
+          elem.ontouchstart = function (e) {
+            dragElem(e.changedTouches[0])
+          };
+  
+          function dragElem(e) {
     
             var dragPanel = elem.getElementsByClassName('modal-dragPanel')[0];
             var dragPanelCoords = dragPanel.getBoundingClientRect();
-    
+
+            var offsetY = e.pageY - elem.offsetTop;
+            var offsetX = e.pageX - elem.offsetLeft;
+
             if (e.clientX > dragPanelCoords.left && 
                 e.clientX < dragPanelCoords.right && 
                 e.clientY > dragPanelCoords.top && 
@@ -87,9 +113,9 @@
               elem.style.zIndex = 1000; 
             
               function moveAt(e) {
-    
-                elem.style.left = e.pageX - elem.offsetWidth / 2 + 'px';
-                elem.style.top = e.pageY - elem.offsetHeight / 2 + 'px';
+
+                elem.style.left = (e.pageX - offsetX) + 'px';
+                elem.style.top = (e.pageY - offsetY) + 'px';
     
                 var asides = Array.from(document.getElementsByTagName('aside'));
                 asides.forEach(function (aside) {
@@ -111,14 +137,24 @@
                 moveAt(e);
               }
             
-              elem.onmouseup = function() {
+              document.ontouchmove = function(e) {
+                moveAt(e.changedTouches[0]);
+              }
+            
+              elem.onmouseup = endDragging
+              elem.ontouchend = endDragging
+              
+              function endDragging (e) {
                 document.onmousemove = null;
+                document.ontouchmove = null;
                 elem.onmouseup = null;
+                elem.ontouchend = null;
     
                 asides.forEach(function (target) {
     
                   if (target.classList.contains('active')) {
-                    elem.removeAttribute('style')
+                    elem.style.top = '0px';
+                    elem.style.left = '0px';
                     elem.style.position = 'relative';
                     elem.style.zIndex = '10';
                     var contentElem = target.getElementsByClassName('content')[0];
@@ -143,9 +179,32 @@
                 aside.classList.remove('active');
                 aside.removeAttribute('style');
               }
-    
+
+            } else if (e.target === resizeX) {
+              window.onmousemove = function (e) {
+                e.cancelBubble = true;
+                if (e.stopPropagation) e.stopPropagation();
+                window.getSelection().collapseToStart();
+                elem.style.width = (e.pageX - elem.getBoundingClientRect().left) + 'px';
+                body.style.width = (e.pageX - elem.getBoundingClientRect().left - 5) + 'px';
+                resizeY.style.width = (e.pageX - elem.getBoundingClientRect().left - 5) + 'px';
+              }
+              window.onmouseup = function (e) {
+                window.onmousemove = null;
+              }
+            } else if (e.target === resizeY) {
+              window.onmousemove = function (e) {
+                e.cancelBubble = true;
+                if (e.stopPropagation) e.stopPropagation();
+                window.getSelection().collapseToStart();
+                elem.style.height = (e.pageY - elem.offsetTop) + 'px';
+                body.style.height = (e.pageY - elem.offsetTop - 70) + 'px';
+              }
+              window.onmouseup = function (e) {
+                window.onmousemove = null;
+              }
             }
-    
+
           }
     
         })
