@@ -1,7 +1,18 @@
+
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+  var storage = {
+    asides: []
+  }
+  
   window.onload = function () {
 
     var asides = Array.from(document.getElementsByTagName('aside'));
+    asides.forEach(function(aside) {
+      storage.asides.push({
+        element: aside,
+        cards: []
+      })
+    })
 
     function initAjaxLink (scope=null) {
 
@@ -86,14 +97,13 @@
             parent.removeChild(elem);
           })
 
-          elem.onmousedown = function (e) {
-            dragElem(e)
-          }
-          elem.ontouchstart = function (e) {
-            dragElem(e.changedTouches[0])
-          };
+          elem.onmousedown = function (e) { dragElem(e) }
+          elem.ontouchstart = function (e) { dragElem(e.changedTouches[0]) };
   
           function dragElem(e) {
+          
+            elem.onmouseup = endDragging;
+            elem.ontouchend = endDragging;
     
             var dragPanel = elem.getElementsByClassName('modal-dragPanel')[0];
             var dragPanelCoords = dragPanel.getBoundingClientRect();
@@ -117,7 +127,6 @@
                 elem.style.left = (e.pageX - offsetX) + 'px';
                 elem.style.top = (e.pageY - offsetY) + 'px';
     
-                var asides = Array.from(document.getElementsByTagName('aside'));
                 asides.forEach(function (aside) {
     
                   var coords = aside.getBoundingClientRect();
@@ -139,45 +148,6 @@
             
               document.ontouchmove = function(e) {
                 moveAt(e.changedTouches[0]);
-              }
-            
-              elem.onmouseup = endDragging
-              elem.ontouchend = endDragging
-              
-              function endDragging (e) {
-                document.onmousemove = null;
-                document.ontouchmove = null;
-                elem.onmouseup = null;
-                elem.ontouchend = null;
-    
-                asides.forEach(function (target) {
-    
-                  if (target.classList.contains('active')) {
-                    elem.style.top = '0px';
-                    elem.style.left = '0px';
-                    elem.style.position = 'relative';
-                    elem.style.zIndex = '10';
-                    var contentElem = target.getElementsByClassName('content')[0];
-                    contentElem.appendChild(elem);
-                  }
-    
-                  uninitAside(target);
-                  target.onmouseover = null;
-                  target.onmouseout = null;
-              
-                })
-    
-              }
-    
-              function initAside (aside) {
-                aside.classList.add('active')
-                aside.style.minWidth = '300px'
-                aside.style.minHeight = '200px'
-              }
-    
-              function uninitAside (aside) {
-                aside.classList.remove('active');
-                aside.removeAttribute('style');
               }
 
             } else if (e.target === resizeX) {
@@ -206,12 +176,73 @@
             }
 
           }
-    
-        })
         
+          function endDragging (e) {
+  
+            document.onmousemove = null;
+            document.ontouchmove = null;
+            elem.onmouseup = null;
+            elem.ontouchend = null;
+  
+            asides.forEach(function (aside) {
+  
+              if (aside.classList.contains('active')) {
+  
+                // do not let cards go over the left, top and right borders
+                if (elem.offsetTop < aside.offsetTop) elem.style.top = aside.offsetTop + 'px'
+                if (elem.offsetLeft < aside.offsetLeft) elem.style.left = aside.offsetLeft + 'px'
+                if ((elem.offsetLeft + elem.offsetWidth) > (aside.offsetLeft + aside.offsetWidth)) elem.style.left = aside.offsetLeft + aside.offsetWidth - elem.offsetWidth + 'px'
+  
+                elem.setAttribute('data-top-position', elem.offsetTop)
+                elem.setAttribute('data-left-position', elem.offsetLeft)
+  
+                var contentElem = aside.getElementsByClassName('content')[0];
+                contentElem.appendChild(elem);
+  
+                let storageAside = storage.asides.find(item => item.element === aside);
+  
+                if (storageAside) {
+                  if (!storageAside.cards.some(item => item === elem)) storageAside.cards.push(elem)
+                }
+  
+                // get the lowest elem in aside to calculate aside bottom border
+                var lowestElem = storageAside.cards[0];
+                if (storageAside) {
+                  storageAside.cards.forEach(item => {
+                    if (Number(item.offsetTop)+item.offsetHeight > Number(lowestElem.offsetTop)+lowestElem.offsetHeight) {
+                      lowestElem = item
+                    }
+                  })
+                  if (!lowestElem) lowestElem = elem;
+                }
+  
+                aside.style.height = (Number(lowestElem.offsetTop)+lowestElem.offsetHeight-aside.offsetTop+5) + 'px';
+  
+              }
+  
+              uninitAside(aside);
+              aside.onmouseover = null;
+              aside.onmouseout = null;
+    
       })
 
     }
+
+    function initAside (aside) {
+      aside.classList.add('active')
+      aside.style.minWidth = '300px'
+      aside.style.minHeight = '200px'
+    }
+
+    function uninitAside (aside) {
+      aside.classList.remove('active');
+    }
+
+  })
+      
+})
+
+}
 
     initAjaxLink()
     
