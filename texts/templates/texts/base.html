@@ -29,8 +29,15 @@
     <noscript><div><img src="https://mc.yandex.ru/watch/52669621" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
     <!-- /Yandex.Metrika counter -->
 </head>
-<h3 style="text-align: center;"><a href="{% static "texts/texts_help.html" %}" target="_blank">Как помочь с текстами?</a></h3>
+<p><h3 style="text-align: center;"><a href="{% static "texts/texts_help.html" %}" target="_blank">Как помочь с текстами?</a></h3></p>
+<p><h3 style="text-align: center;"><a href="{% static "texts/project_help.html" %}" target="_blank">Как помочь проекту?</a></h3></p>
 {% block body %}
 {% endblock %}
+
+<p><a href="{% url 'terms_to_define' %}" target="_blank">Термины, которые ещё не определены</a></p>
+<p><a href="{% url 'need_to_be_done' %}" target="_blank">Надо доработать</a></p>
+<p><a href="{% url 'not_translated' %}" target="_blank">Надо перевести</a></p>
+
+
 <div class="cardStorage"></div>
 </html>

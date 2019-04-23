@@ -10,14 +10,14 @@ import os
 import re
 
 _all_fields = ['author', 'book', 'siman', 'chapter', 'klal', 'sub_chapter', 'seif',
-               'din', 'page', 'dibur_amathil', 'siman_katan']
+               'din', 'page', 'dibur_amathil', 'siman_katan', 'question', 'mishna', 'perek', 'amud']
 
 
 class _FilseStorage:
     # все поля используются
     book_level = ['author', 'book', ]
     # используется только одно поле!
-    chapter_level = ['siman']
+    chapter_level = ['siman', 'perek', 'page']
     subchapter_level = list(set(_all_fields) - set(book_level) - set(chapter_level))
 
 
@@ -41,9 +41,10 @@ class Link:
         # self.params: str = None
 
 
-
-        self.accepted_param_names = ['siman', 'klal', 'seif', 'din', 'page', 'dibur_amathil', 'siman_katan', 'referrerer']
-        self.fs_level_param_names = ['siman', 'klal', 'page', ]
+        # TODO не тоже ли это что subchapter_level? Такое ощущение, что их тут двоится
+        self.accepted_param_names = ['siman', 'klal', 'seif', 'din', 'page', 'dibur_amathil', 'siman_katan', 'referrerer', 'question', 'mishna',
+                                     'amud']
+        self.fs_level_param_names = ['siman', 'klal', 'page', 'perek']
         self.intext_param_names = list(set(self.accepted_param_names) - set(self.fs_level_param_names))
 
     def set_author_name(self, author_name: AuthorName):
@@ -106,6 +107,7 @@ class Link:
             return r
         # если ничего такого нет и надо вернуть текст всего файла
         else:
+            # убираем служебные [[ в конце с возможными пробелами/строками
             return r"(.+)"
 
     def validate(self):
@@ -360,6 +362,11 @@ class Storage:
             return "??ЕЩЁ НЕ ПЕРЕВЕДЕНО??"
         pattern = link.get_regexp()
         print(pattern)
+        if pattern == r"(.+)":
+            # если нам нужен весь текст, проще отрезать служебные [[ в конце текста, чем делать это регекспом
+            fulltext = fulltext.rstrip()
+            if fulltext.endswith('[['):
+                fulltext = fulltext[:-2].rstrip()
         result = re.findall(pattern, fulltext, re.DOTALL)
         if result:
             return result[0]
@@ -369,9 +376,10 @@ class Storage:
 
     def __file_get_term(self, term):
         term = cyrtranslit.to_latin(term, 'ru')
-        fullpath = os.path.join(self.texts_path, 'TERM_DEFINITIONS', term)
+        fullpath = os.path.join(self.texts_path, 'TERM_DEFINITIONS', "{}.txt".format(term) )
+        # print(fullpath)
         try:
-            with open("{}.txt".format(fullpath), 'r', encoding = 'utf8') as f:
+            with open(fullpath, 'r', encoding = 'utf8') as f:
                 fulltext = f.read()
             # fulltext = fulltext.replace('\n','<p>')
             return fulltext
@@ -386,9 +394,9 @@ class Storage:
         """
         pass
 
-    def get_term(self, term: str) -> str:
-        """
-        Возвращает подсказку для определения
-        """
-        pass
+    # def get_term(self, term: str) -> str:
+    #     """
+    #     Возвращает подсказку для определения
+    #     """
+    #     pass
 

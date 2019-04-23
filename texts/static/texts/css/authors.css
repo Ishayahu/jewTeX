@@ -1,6 +1,18 @@
 .sha{
     font-weight: 600;
 }
+.mishna{
+    font-weight: 600;
+}
 .ramo{
 
+}
+.gmora_question{
+    background: fuchsia;
+}
+.gmora_answer{
+    background: lime;
+}
+.gmora_statement{
+    background: orange;
 }

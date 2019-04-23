@@ -11,6 +11,10 @@ class AuthorName:
                      'hamechaber': 'joseph_karo',
                      'maran': 'joseph_karo',
                      'smak': 'isaac_ben_joseph_of_corbeil',
+                     'terumat_hadeshen': 'israel_isserlein_ben_petachia',
+                     'rif': 'isaac_ben_jacob_alfasi_ha_cohen',
+                     'talmud': 'talmud',
+                     'rosh': 'asher_ben_jehiel',
                      }
 
     author2kitzur = {v: k for k, v in author_kitzur.items()}
@@ -53,6 +57,7 @@ class Book:
                    'sha3': 'shulchan_aruch_even_haezer',
                    'sha4': 'shulchan_aruch_choshen_mishpat',
                    'smak': 'sefer_mitzvot_katan',
+                   'rif_bejca': 'sefer_ha_halachot_al_bejca',
                   }
     book2kitzur = {v: k for k, v in book_kitzur.items()}
 
@@ -92,7 +97,10 @@ def get_author(author_name):
         AuthorName('таз').full_name: __Taz,
         AuthorName('шах').full_name: __Shah,
         AuthorName('смак').full_name: __Smak,
+        AuthorName('риф').full_name: __Isaac_ben_jacob_alfasi_ha_cohen,
         AuthorName('isur_vheyter_harokh').full_name: __Isur_vheyter_harokh,
+        AuthorName('terumat_hadeshen').full_name: __Terumat_hadeshen,
+        AuthorName('rosh').full_name: __Rosh,
                }
     return authors[AuthorName(author_name).full_name]()
 
@@ -126,4 +134,19 @@ class __Maran(Author):
 
 class __Isur_vheyter_harokh(Author):
     author_name = AuthorName('isur_vheyter_harokh')
+    css_class_name = 'grey'
+
+
+class __Terumat_hadeshen(Author):
+    author_name = AuthorName('terumat_hadeshen')
+    css_class_name = 'grey'
+
+
+class __Isaac_ben_jacob_alfasi_ha_cohen(Author):
+    author_name = AuthorName('rif')
+    css_class_name = 'grey'
+
+
+class __Rosh(Author):
+    author_name = AuthorName('rosh')
     css_class_name = 'grey'

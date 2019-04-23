@@ -1,0 +1,12 @@
+{% extends 'texts/base.html' %}
+{% block body %}
+<body>
+    <ul>
+        {% for record in result %}
+            <li>{{ record.0 }} -> {{ record.1 }}</li>
+        {% endfor %}
+    </ul>
+
+</body>
+
+{% endblock %}

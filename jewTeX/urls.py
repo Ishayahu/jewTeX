@@ -20,6 +20,9 @@ import texts.views
 
 urlpatterns = [
     url(r'^$', texts.views.index, name = 'index'),
+    url(r'utils/terms_to_define', texts.views.terms_to_define, name = 'terms_to_define'),
+    url(r'utils/need_to_be_done', texts.views.need_to_be_done, name = 'need_to_be_done'),
+    url(r'utils/not_translated', texts.views.not_translated, name = 'not_translated'),
     path('<slug:author>/', texts.views.author, name = 'author'),
     path('<slug:author>/<slug:book>/', texts.views.book, name = 'book'),
     # path('open/<slug:author>/<slug:book>/siman=<int:siman>&seif=<int:seif>/', texts.views.open_by_siman_and_seif, name = 'open_by_siman_seif'),

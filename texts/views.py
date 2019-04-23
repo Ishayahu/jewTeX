@@ -16,6 +16,35 @@ s = Storage(os.path.join(os.getcwd(), 'TEXTS_DB'))
 from django.http import JsonResponse
 
 TEXTS_PATH = os.path.join(os.getcwd(),'TEXTS_DB')
+delimiters = '%'
+
+def close_unclosed_tags(text):
+    temp_text = text
+    opened_tags = []
+    closed_tags = []
+    r = re.search(r'(</?([^>]+)>)', temp_text)
+    while r:
+        print(r.groups())
+        tag, tag_name = r.groups()
+        if tag[1] == '/':
+            # ищем последнее вхождение этого тега и убираем его
+            try:
+                last_index = len(opened_tags) - 1 - opened_tags[::-1].index(tag_name)
+                opened_tags.pop(last_index)
+            except ValueError:  # значит, начинается с закрывающего тега - надо добавить открывающий в начале
+                closed_tags.append(tag_name)
+        else:
+            opened_tags.append(tag_name)
+        temp_text = temp_text.replace(tag, '', 1)
+        r = re.search(r'(</?([^>]+)>)', temp_text)
+    print(opened_tags)
+    # добавляем в текст незакрытые теги в конце
+    for t in opened_tags[::-1]:
+        text += "</{}>".format(t)
+    for t in closed_tags[::-1]:
+        text = "<{}>".format(t) + text
+
+    return text
 
 
 def htmlizer(text, link: Link):
@@ -26,12 +55,14 @@ def htmlizer(text, link: Link):
     :param link: Link
     :return: str
     """
-    delimiters = '%'
-    text = text.replace('\n','<p>')
+
+
+
     # заменяем <ramo> на <div class='ramo'>
     for to_replace, closing_tag, tag in re.findall(r'(<(/?)([^/>]+)>)',text):
         text = text.replace(to_replace,"<div class='{}'>".format(tag) if not closing_tag else "</div>")
 
+    text = text.replace('\n', '<p>')
     # обрабатываем "короткие" ссылки {{taz/1}} на ссылки /api/text/taz/taz_al_yore_dea/siman=92&siman_katan=1/
     for to_replace, author_kitzur_name, siman_katan in re.findall('({0}{0}([^/]+)/([^{0}]+){0}{0})'.format(delimiters),text):
         # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
@@ -112,6 +143,7 @@ def htmlizer(text, link: Link):
     for subtext in re.findall('\?\?(.+?)\?\?',text):
         text = text.replace("??{}??".format(subtext), '<span title="Требуется вставить ссылку/доработать" class="need_work">{}</span>'.format(
             subtext))
+    print(text)
     return text
 
 def demarking(text, link):
@@ -237,9 +269,10 @@ def get_quote(author, book, params, refferer):
             author, book, params, link, link.errors))
 
     text = s.get_text_by_link(link)
-    quote = re.findall('\[\[refferer={0}]](.*)\[\[/refferer={0}]]'.format(refferer),text, re.M)
+    quote = re.findall('\[\[refferer={0}]](.*)\[\[/refferer={0}]]'.format(refferer),text, re.M+re.DOTALL)
     if quote:
-        html = htmlizer(quote[0], link)
+        quote = close_unclosed_tags(quote[0])
+        html = htmlizer(quote, link)
         return html
     return "NOT FOUND"
 
@@ -263,7 +296,8 @@ def api_request(request, author, book, chapter_name, params):
     text = s.get_text_by_link(link)
     html = htmlizer(text, link)
     author = get_author(author)
-    return JsonResponse({'title': '{}:{}'.format(author_name.short_name, link.short_str()), 'content': html, 'cardColor': author.css_class_name})
+    return JsonResponse({'title': '{}:{}:{}'.format(author_name.short_name, book.short_name, link.short_str()), 'content': html, 'cardColor':
+        author.css_class_name})
 
 
 def index(request):
@@ -289,4 +323,91 @@ def book(request, author, book):
     content = s.get_book_TOC(book)
     return render(request, 'texts/book.html', {
         'content':content, 'author': author, 'book': book, 'title': "Содержание книги {} от {}".format(book, author)
+    })
+
+def terms_to_define(request):
+    result = []
+    for root, dir, files in os.walk(r"F:\Yandex\Sites\jewTeX\TEXTS_DB"):
+        # print(root)
+        if not '.git' in root:
+            for items in files:
+                filepath = os.path.join(root, items)
+                with open(filepath, 'r', encoding = 'utf8') as fin:
+                    text = fin.read()
+                    for term in re.findall('\*\*(.+?)\*\*', text):
+                        term_definition = s.get_term(term)
+                        if term_definition == 'DEFINITION NOT FOUND':
+                            result.append([filepath, term, term_definition])
+                        else:
+                            print(term_definition)
+
+    for k in result:
+        print(k)
+
+    terms = {i[1] for i in result}
+
+    return render(request, 'texts/terms_to_define.html', {
+        'terms':terms, 'title': "Термины без определения"
+    })
+
+def need_to_be_done(request):
+    result = []
+    for root, dir, files in os.walk(r"F:\Yandex\Sites\jewTeX\TEXTS_DB"):
+        # print(root)
+        if not '.git' in root:
+            # for items in fnmatch.filter(files, "*"):
+            for items in files:
+                filepath = os.path.join(root, items)
+                with open(filepath, 'r', encoding = 'utf8') as fin:
+                    text = fin.read()
+                    for subtext in re.findall('\?\?(.+?)\?\?', text):
+                        result.append([filepath, subtext])
+                        # result.append([filepath.replace(s.texts_path,'').split(os.path.sep)[1:], subtext])
+
+    # for k in result:
+    #     print(k)
+    return render(request, 'texts/need_to_be_done.html', {
+        'result':result, 'title': "Надо доделать"
+    })
+
+def not_translated(request):
+    from urllib.request import urlopen
+    result = []
+    for root, dir, files in os.walk(r"F:\Yandex\Sites\jewTeX\TEXTS_DB"):
+        # print(root)
+        if not '.git' in root:
+            # for items in fnmatch.filter(files, "*"):
+            for items in files:
+                filepath = os.path.join(root, items)
+                with open(filepath, 'r', encoding = 'utf8') as fin:
+                    text = fin.read()
+                    # вставляем отрывки из других текстов
+                    # %%maran:sha2:siman=106&seif=1%refferer%%
+                    for to_replace, author_kitzur_name, book, params, refferer in re.findall(
+                            '({0}{0}([a-z0-9_]+):([a-z0-9_]+):((?:[a-z_]+=[^{0}&]+&?)+){0}([a-z_0-9]+){0}{0})'.format(
+                                delimiters), text):
+                        # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
+                        quote = get_quote(author_kitzur_name, book, params, refferer)
+                        if quote == "NOT FOUND":
+                            result.append([filepath, (author_kitzur_name, book, params, refferer)])
+
+                    # обрабатываем "длинные" ссылки (как в url)
+                    # %%в начале главы 106%maran:sha2:siman=106&seif=1%%
+                    for to_replace, link_text, author_kitzur_name, book, params in re.findall(
+                            '({0}{0}([^{0}]+){0}([a-z0-9_]+):([a-z0-9_]+):((?:[a-z_]+=[^{0}&]+&?)+){0}{0})'.format(
+                                delimiters), text):
+                        # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
+                        link = Link()
+                        link.set_author_name(AuthorName(author_kitzur_name))
+                        link.set_book(Book(book, AuthorName(author_kitzur_name)))
+                        link.set_params(params)
+                        url = reverse('text_api_request', args = (author_kitzur_name, book, link.chapter_name, params))
+                        a = urlopen("http://127.0.0.1:8000{}".format(url))
+                        if "TEXT NOT FOUND" in a.read().decode('utf8'):
+                            result.append([filepath, url])
+
+    # for k in result:
+    #     print(k)
+    return render(request, 'texts/need_to_be_done.html', {
+        'result':result, 'title': "Надо перевести"
     })
