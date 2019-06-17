@@ -101,6 +101,7 @@ def get_author(author_name):
         AuthorName('isur_vheyter_harokh').full_name: __Isur_vheyter_harokh,
         AuthorName('terumat_hadeshen').full_name: __Terumat_hadeshen,
         AuthorName('rosh').full_name: __Rosh,
+        AuthorName('talmud').full_name: __Talmud,
                }
     return authors[AuthorName(author_name).full_name]()
 
@@ -148,5 +149,10 @@ class __Isaac_ben_jacob_alfasi_ha_cohen(Author):
 
 
 class __Rosh(Author):
+    author_name = AuthorName('rosh')
+    css_class_name = 'grey'
+
+
+class __Talmud(Author):
     author_name = AuthorName('rosh')
     css_class_name = 'grey'

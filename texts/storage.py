@@ -10,7 +10,7 @@ import os
 import re
 
 _all_fields = ['author', 'book', 'siman', 'chapter', 'klal', 'sub_chapter', 'seif',
-               'din', 'page', 'dibur_amathil', 'siman_katan', 'question', 'mishna', 'perek', 'amud']
+               'din', 'page', 'dibur_amathil', 'siman_katan', 'question', 'mishna', 'perek', 'amud', 'mizva']
 
 
 class _FilseStorage:
@@ -43,8 +43,8 @@ class Link:
 
         # TODO не тоже ли это что subchapter_level? Такое ощущение, что их тут двоится
         self.accepted_param_names = ['siman', 'klal', 'seif', 'din', 'page', 'dibur_amathil', 'siman_katan', 'referrerer', 'question', 'mishna',
-                                     'amud']
-        self.fs_level_param_names = ['siman', 'klal', 'page', 'perek']
+                                     'amud', 'mizva']
+        self.fs_level_param_names = ['siman', 'klal', 'page', 'perek',]
         self.intext_param_names = list(set(self.accepted_param_names) - set(self.fs_level_param_names))
 
     def set_author_name(self, author_name: AuthorName):
@@ -333,7 +333,9 @@ class Storage:
         """
         Возвращает содержание книги
         """
-        regexp = r"\[\[({})=(\d+)]]".format('|'.join(self.fields2chapters.subchapter_level))
+        # попробуем чтобы подглава могла иметь название, не только цифры
+        regexp = r"\[\[({})=([^]]+)]]".format('|'.join(self.fields2chapters.subchapter_level))
+        # regexp = r"\[\[({})=(\d+)]]".format('|'.join(self.fields2chapters.subchapter_level))
         content = Content()
         for chapter_name in [_ for _ in os.listdir(os.path.join(self.texts_path,
                                                                 book.author.full_name,
