@@ -92,18 +92,28 @@ class Book:
 
 
 def get_author(author_name):
-    authors = {
-        AuthorName('maran').full_name: __Maran,
-        AuthorName('таз').full_name: __Taz,
-        AuthorName('шах').full_name: __Shah,
-        AuthorName('смак').full_name: __Smak,
-        AuthorName('риф').full_name: __Isaac_ben_jacob_alfasi_ha_cohen,
-        AuthorName('isur_vheyter_harokh').full_name: __Isur_vheyter_harokh,
-        AuthorName('terumat_hadeshen').full_name: __Terumat_hadeshen,
-        AuthorName('rosh').full_name: __Rosh,
-        AuthorName('talmud').full_name: __Talmud,
+    author_color = {
+        AuthorName('таз').full_name: 'yellow',
+        AuthorName('шах').full_name: 'green',
                }
-    return authors[AuthorName(author_name).full_name]()
+    a = Author()
+    a.author_name = AuthorName(author_name)
+    a.css_class_name = author_color.get(a.author_name.full_name,'grey')
+    return a
+
+# def get_author_old(author_name):
+#     authors = {
+#         AuthorName('maran').full_name: __Maran,
+#         AuthorName('таз').full_name: __Taz,
+#         AuthorName('шах').full_name: __Shah,
+#         AuthorName('смак').full_name: __Smak,
+#         AuthorName('риф').full_name: __Isaac_ben_jacob_alfasi_ha_cohen,
+#         AuthorName('isur_vheyter_harokh').full_name: __Isur_vheyter_harokh,
+#         AuthorName('terumat_hadeshen').full_name: __Terumat_hadeshen,
+#         AuthorName('rosh').full_name: __Rosh,
+#         AuthorName('talmud').full_name: __Talmud,
+#                }
+#     return authors[AuthorName(author_name).full_name]()
 
 
 class Author:
@@ -113,46 +123,46 @@ class Author:
     # css_class_name: str = None
 
 
-class __Taz(Author):
-    author_name = AuthorName('таз')
-    css_class_name = 'yellow'
-
-
-class __Shah(Author):
-    author_name = AuthorName('шах')
-    css_class_name = 'green'
-
-
-class __Smak(Author):
-    author_name = AuthorName('смак')
-    css_class_name = 'grey'
-
-
-class __Maran(Author):
-    author_name = AuthorName('maran')
-    css_class_name = 'grey'
-
-
-class __Isur_vheyter_harokh(Author):
-    author_name = AuthorName('isur_vheyter_harokh')
-    css_class_name = 'grey'
-
-
-class __Terumat_hadeshen(Author):
-    author_name = AuthorName('terumat_hadeshen')
-    css_class_name = 'grey'
-
-
-class __Isaac_ben_jacob_alfasi_ha_cohen(Author):
-    author_name = AuthorName('rif')
-    css_class_name = 'grey'
-
-
-class __Rosh(Author):
-    author_name = AuthorName('rosh')
-    css_class_name = 'grey'
-
-
-class __Talmud(Author):
-    author_name = AuthorName('rosh')
-    css_class_name = 'grey'
+# class __Taz(Author):
+#     author_name = AuthorName('таз')
+#     css_class_name = 'yellow'
+#
+#
+# class __Shah(Author):
+#     author_name = AuthorName('шах')
+#     css_class_name = 'green'
+#
+#
+# class __Smak(Author):
+#     author_name = AuthorName('смак')
+#     css_class_name = 'grey'
+#
+#
+# class __Maran(Author):
+#     author_name = AuthorName('maran')
+#     css_class_name = 'grey'
+#
+#
+# class __Isur_vheyter_harokh(Author):
+#     author_name = AuthorName('isur_vheyter_harokh')
+#     css_class_name = 'grey'
+#
+#
+# class __Terumat_hadeshen(Author):
+#     author_name = AuthorName('terumat_hadeshen')
+#     css_class_name = 'grey'
+#
+#
+# class __Isaac_ben_jacob_alfasi_ha_cohen(Author):
+#     author_name = AuthorName('rif')
+#     css_class_name = 'grey'
+#
+#
+# class __Rosh(Author):
+#     author_name = AuthorName('rosh')
+#     css_class_name = 'grey'
+#
+#
+# class __Talmud(Author):
+#     author_name = AuthorName('talmud')
+#     css_class_name = 'grey'
