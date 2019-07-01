@@ -9,15 +9,16 @@ from django.urls import reverse
 import os
 import re
 
+# part = абзац, мысль
 _all_fields = ['author', 'book', 'siman', 'chapter', 'klal', 'sub_chapter', 'seif',
-               'din', 'page', 'dibur_amathil', 'siman_katan', 'question', 'mishna', 'perek', 'amud', 'mizva']
+               'din', 'page', 'dibur_amathil', 'siman_katan', 'question', 'mishna', 'perek', 'amud', 'mizva', 'part']
 
 
 class _FilseStorage:
     # все поля используются
     book_level = ['author', 'book', ]
     # используется только одно поле!
-    chapter_level = ['siman', 'perek', 'page']
+    chapter_level = ['siman', 'klal', 'page', 'perek','mizva']
     subchapter_level = list(set(_all_fields) - set(book_level) - set(chapter_level))
 
 
@@ -42,10 +43,12 @@ class Link:
 
 
         # TODO не тоже ли это что subchapter_level? Такое ощущение, что их тут двоится
-        self.accepted_param_names = ['siman', 'klal', 'seif', 'din', 'page', 'dibur_amathil', 'siman_katan', 'referrerer', 'question', 'mishna',
-                                     'amud', 'mizva']
-        self.fs_level_param_names = ['siman', 'klal', 'page', 'perek',]
-        self.intext_param_names = list(set(self.accepted_param_names) - set(self.fs_level_param_names))
+        # self.accepted_param_names = ['siman', 'klal', 'seif', 'din', 'page', 'dibur_amathil', 'siman_katan', 'referrerer', 'question', 'mishna',
+        #                              'amud', 'mizva', 'part']
+        # self.fs_level_param_names = ['siman', 'klal', 'page', 'perek','mizva']
+        self.fs_level_param_names = _FilseStorage.chapter_level
+        # self.intext_param_names = list(set(self.accepted_param_names) - set(self.fs_level_param_names))
+        self.intext_param_names = _FilseStorage.subchapter_level
 
     def set_author_name(self, author_name: AuthorName):
         self.author_name = author_name
