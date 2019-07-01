@@ -1,6 +1,7 @@
 {% extends 'texts/base.html' %}
 {% block body %}
 <body>
+    {{ info | safe }}
     <ul>
         {% for chapter in content.chapters %}
             <li> {{ chapter.name }}:

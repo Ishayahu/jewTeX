@@ -311,18 +311,19 @@ def index(request):
 def author(request, author):
     author = AuthorName(author)
     books = s.get_books_for_author(author)
+    info = s.get_author_info(author)
     return render(request, 'texts/author.html', {
-        'books':books, 'author': author, 'title': "Список книг для {}".format(author)
+        'books':books, 'author': author, 'title': "Список книг для {}".format(author), 'info':info,
     })
 
 
 def book(request, author, book):
     author = AuthorName(author)
     book = Book(book, author)
-
+    info = s.get_book_info(book)
     content = s.get_book_TOC(book)
     return render(request, 'texts/book.html', {
-        'content':content, 'author': author, 'book': book, 'title': "Содержание книги {} от {}".format(book, author)
+        'content':content, 'author': author, 'book': book, 'title': "Содержание книги {} от {}".format(book, author), 'info':info,
     })
 
 def terms_to_define(request):

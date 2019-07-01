@@ -311,6 +311,8 @@ class Storage:
         if self.texts_path:
             return {
                 'get_authors': self.__file_get_authors,
+                'get_author_info': self.__file_get_author_info,
+                'get_book_info': self.__file_get_book_info,
                 'get_books_for_author': self.__file_get_books_for_author,
                 'get_book_TOC': self.__file_get_book_TOC,
                 'get_text_by_link': self.__file_get_text_by_link,
@@ -330,6 +332,30 @@ class Storage:
         Возвращает список книг для автора
         """
         return [Book(name, author) for name in os.listdir(os.path.join(self.texts_path, author.full_name)) if not name.startswith('.')]
+
+    def __file_get_author_info(self, author: AuthorName):
+        """
+        Возвращает список книг для автора
+        """
+        r = ''
+        try:
+            with open(os.path.join(self.texts_path, author.full_name,'.info')) as f:
+                r = f.read()
+        except:
+            pass
+        return r
+
+    def __file_get_book_info(self, book: Book):
+        """
+        Возвращает список книг для автора
+        """
+        r = ''
+        try:
+            with open(os.path.join(self.texts_path, book.author.full_name, book.full_name, '.info')) as f:
+                r = f.read()
+        except:
+            pass
+        return r
 
     # noinspection PyPep8Naming
     def __file_get_book_TOC(self, book: Book) -> Content:

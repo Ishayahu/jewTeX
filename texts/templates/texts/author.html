@@ -1,6 +1,7 @@
 {% extends 'texts/base.html' %}
 {% block body %}
 <body>
+    {{ info | safe}}
     <ul>
         {% for book in books %}
             <li><a href="{% url 'book' author.full_name book.full_name %}">{{ book }}</a></li>
