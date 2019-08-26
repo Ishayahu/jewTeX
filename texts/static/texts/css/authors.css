@@ -16,3 +16,12 @@
 .gmora_statement{
     background: orange;
 }
+.question{
+    font-weight: 600;
+}
+.answer{
+
+}
+.note{
+    font-style: italic;
+}

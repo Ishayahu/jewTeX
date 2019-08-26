@@ -1,16 +1,21 @@
-with open(r'C:\Users\ishay\YandexDisk\Sites\jewTeX\TEXTS_DB\yosef_karo\shulkhan_arukh_yore_dea\92.txt', 'r',
-          encoding='utf8') as f:
-    ft = f.read()
-# with open(r'C:\Users\ishay\YandexDisk\Sites\jewTeX\TEXTS_DB\yakov_ben_osher\tur\89.txt', 'r',
-#           encoding='utf8') as f:
-#     ft2 = f.read()
-
-
-# ft == ft2
+import os
+import fnmatch
 import re
+from texts.storage import Storage
 
-# pattern = '.*\[\[seif=4]].*?(.*?)\[\[.*'
-pattern = '({{([^/]+)/(.+)}})'
+s = Storage(r'F:\Yandex\Sites\jewTeX\TEXTS_DB')
+result = []
+for root, dir, files in os.walk(r"F:\Yandex\Sites\jewTeX\TEXTS_DB"):
+        # print(root)
+        if not '.git' in root:
+            # for items in fnmatch.filter(files, "*"):
+            for items in files:
+                filepath = os.path.join(root, items)
+                with open(filepath,'r',encoding = 'utf8') as fin:
+                    text = fin.read()
+                    for subtext in re.findall('\?\?(.+?)\?\?', text):
+                        result.append([filepath, subtext])
+                        # result.append([filepath.replace(s.texts_path,'').split(os.path.sep)[1:], subtext])
 
-# re.findall(pattern, ft2, re.DOTALL)
-re.findall(pattern, ft, re.DOTALL)
+for k in result:
+    print(k)

@@ -37,7 +37,7 @@ def close_unclosed_tags(text):
             opened_tags.append(tag_name)
         temp_text = temp_text.replace(tag, '', 1)
         r = re.search(r'(</?([^>]+)>)', temp_text)
-    print(opened_tags)
+    # print(opened_tags)
     # добавляем в текст незакрытые теги в конце
     for t in opened_tags[::-1]:
         text += "</{}>".format(t)
@@ -131,7 +131,8 @@ def htmlizer(text, link: Link):
         link.set_author_name(AuthorName(author_kitzur_name))
         link.set_book(Book(book, AuthorName(author_kitzur_name)))
         link.set_params(params)
-        url = reverse('text_api_request', args = (author_kitzur_name, book, link.chapter_name, params))
+        url = reverse('text_api_request', args = (author_kitzur_name, book, link.chapter_name, link.get_params()))
+        # url = reverse('text_api_request', args = (author_kitzur_name, book, link.chapter_name, params))
         text = text.replace(to_replace,
                             '<span class="ajax-block"><a href="#!" class="js-ajax-link" data-ajax-url="{url}">{name}</a></span>'.format(
                                 **{'url': url, 'name': link_text}))
@@ -143,7 +144,7 @@ def htmlizer(text, link: Link):
     for subtext in re.findall('\?\?(.+?)\?\?',text):
         text = text.replace("??{}??".format(subtext), '<span title="Требуется вставить ссылку/доработать" class="need_work">{}</span>'.format(
             subtext))
-    print(text)
+    # print(text)
     return text
 
 def demarking(text, link):
@@ -217,7 +218,7 @@ def demarking(text, link):
 
 
 def open_text(request, author, book, chapter_name, params):
-    print(params)
+    # print(params)
     author_name = AuthorName(author)
     book = Book(book, author_name)
     # book_TOC: Content = s.get_book_TOC(book)
@@ -255,7 +256,7 @@ def open_text(request, author, book, chapter_name, params):
 
 
 def get_quote(author, book, params, refferer):
-    print(params)
+    # print(params)
     author_name = AuthorName(author)
     book = Book(book, author_name)
 
@@ -278,8 +279,8 @@ def get_quote(author, book, params, refferer):
 
 
 def api_request(request, author, book, chapter_name, params):
-    print('api')
-    print(params)
+    # print('api')
+    # print(params)
 
     author_name = AuthorName(author)
     book = Book(book, author_name)
@@ -295,6 +296,7 @@ def api_request(request, author, book, chapter_name, params):
 
     text = s.get_text_by_link(link)
     html = htmlizer(text, link)
+    html += "<p><a href='{}' target='_blank'>к книге</a></p>".format(link.get_url())
     author = get_author(author)
     return JsonResponse({'title': '{}:{}:{}'.format(author_name.short_name, book.short_name, link.short_str()), 'content': html, 'cardColor':
         author.css_class_name})

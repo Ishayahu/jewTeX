@@ -19,7 +19,10 @@ class _FilseStorage:
     book_level = ['author', 'book', ]
     # используется только одно поле!
     chapter_level = ['siman', 'klal', 'page', 'perek','mizva']
-    subchapter_level = list(set(_all_fields) - set(book_level) - set(chapter_level))
+    # то, что может быть как главой, так и разделом внутри главы. Например, книга иногда может делиться на страницы (как талмуд),
+    # а иногда на заповеди (как у Рамбама), и тогда делится делится на страницы внутри заповеди
+    can_be_intext = ['mizva', 'page']
+    subchapter_level = list(set(_all_fields) - set(book_level) - set(chapter_level)) + can_be_intext
 
 
 class Link:
@@ -49,9 +52,21 @@ class Link:
         self.fs_level_param_names = _FilseStorage.chapter_level
         # self.intext_param_names = list(set(self.accepted_param_names) - set(self.fs_level_param_names))
         self.intext_param_names = _FilseStorage.subchapter_level
-
+    def __repr__(self):
+        return "{}|{}|{}|{}".format(self.author_name, self.book, self.chapter_name, self.params)
     def set_author_name(self, author_name: AuthorName):
         self.author_name = author_name
+
+    def get_url(self):
+        subchapter_params = []
+        for param in self.params.split('&'):
+            k,v = param.split('=')
+            if k in self.fs_level_param_names:
+                pass
+            else:
+                subchapter_params.append(param)
+        subchapter_params = "&".join(subchapter_params)
+        return reverse('open', args=(self.author_name.full_name, self.book.full_name, self.chapter_name, subchapter_params))
 
     def set_book(self, book: Book):
         self.book = book
@@ -61,12 +76,28 @@ class Link:
 
     def set_params(self, params: str):
         self.params = params
+        self.correct_params = []
         for k, v in re.findall('([^=]*)=([^&]*)&?', params):
-            if k in self.intext_param_names:
-                self.__setattr__(k, v)
-            if k in self.fs_level_param_names:
-                self.chapter_name = v
+            # print (k,v)
+            used_as_chapter_name = False
+            # сперва проверяем, что это не глава и лишь если нет - тогда отдаём в параметры
 
+            # if k in self.intext_param_names:
+            #     self.__setattr__(k, v)
+            if k in self.fs_level_param_names:
+                # если ещё не указана глава. Так как может быть, что глава уже указана, так как некоторые подглавы могут называться как главы:
+                # мицва и страница например
+                if not self.chapter_name:
+                    # print('set chapter_name to {}'.format(v))
+                    self.chapter_name = v
+                    used_as_chapter_name = True
+            if k in self.intext_param_names and not used_as_chapter_name:
+                self.__setattr__(k, v)
+                # print('set {} to {}'.format(k,v))
+                self.correct_params.append("{}={}".format(k,v))
+        self.correct_params = "&".join(self.correct_params)
+    def get_params(self):
+        return self.correct_params
     def get_path_to_file(self) -> str:
         """
         Возвращаем путь к файлу, где хранится текст
@@ -79,6 +110,10 @@ class Link:
         class SubC:
             name = None
             type = None
+            def __str__(self):
+                return "SubC: {}({})".format(self.name, self.type)
+            def __repr__(self):
+                return "SubC: {}({})".format(self.name, self.type)
 
         result = SubC()
         if any([_ in self.__dict__ for _ in self.intext_param_names]):
@@ -99,7 +134,9 @@ class Link:
             r_end = ''
             # TODO надо подумать над ним, но пока оставлю так, потому что ещё не ясно, какие варианты могут быть
             for param in self.intext_param_names:
+                print(param)
                 if param in self.__dict__:
+                    print('in self.__dict__')
                     r += r"\[\[{name}={value}]].*?".format(name = param, value = self.__getattribute__(param))
                     r_end += r"(?:\[\[{name}=.*|\[\[$)".format(name = param)
             # Добавляем содержимое
@@ -137,10 +174,10 @@ class _Subchapter:
         # self.chapter: _Chapter = None
 
     def __repr__(self):
-        return self.__str__()
+        return "_Subchapter {}:{}".format(self.type, self.name)
 
     def __str__(self):
-        return "{}:{}".format(self.type, self.name)
+        return "_Subchapter {}:{}".format(self.type, self.name)
 
     def __eq__(self, other):
         return self.name == other.name and self.type == other.type
@@ -189,6 +226,8 @@ class Content:
         self.current_place = None  # type: Link
         # self.current_place: Link = None
 
+    def __repr__(self):
+        return "Content: {} /{}/".format(self.chapters, self.current_place)
     def add_chapter(self, chapter_name):
         self.chapters.append(chapter_name)
         self.chapters.sort()
@@ -238,16 +277,22 @@ class Content:
         current_chapter = self.chapters[current_chapter_idx]
 
         current_subchapter = self.current_place.get_subchapter()
-        current_subchapter_idx = [c.name for c in current_chapter.subchapters].index(current_subchapter.name)
-
+        subchapters = [c for c in current_chapter.subchapters if c.type==current_subchapter.type]
+        # current_subchapter_idx = [c.name for c in current_chapter.subchapters].index(current_subchapter.name)
+        current_subchapter_idx = [c.name for c in subchapters].index(current_subchapter.name)
+        # print(current_subchapter)
+        # print(subchapters)
+        # print(current_subchapter_idx)
         # можем ли перейти к следующей подглаве:
-        if current_subchapter_idx + 1 < len(current_chapter.subchapters): # если это не последний раздел
+        # if current_subchapter_idx + 1 < len(current_chapter.subchapters): # если это не последний раздел
+        if current_subchapter_idx + 1 < len(subchapters): # если это не последний раздел
             return reverse('open', args = [
                 self.current_place.author_name.full_name,
                 self.current_place.book.full_name,
                 self.chapters[current_chapter_idx].name,
-                "{}={}".format(self.chapters[current_chapter_idx].subchapters[current_subchapter_idx + 1].type,
-                               self.chapters[current_chapter_idx].subchapters[current_subchapter_idx + 1].name)
+                # "{}={}".format(self.chapters[current_chapter_idx].subchapters[current_subchapter_idx + 1].type,
+                #                self.chapters[current_chapter_idx].subchapters[current_subchapter_idx + 1].name)
+                "{}={}".format(current_subchapter.type,subchapters[current_subchapter_idx + 1].name)
             ])
         else:
             # можем ли перйти к след. главе
@@ -263,19 +308,21 @@ class Content:
         current_chapter = self.chapters[current_chapter_idx]
 
         current_subchapter = self.current_place.get_subchapter()
-        current_subchapter_idx = [c.name for c in current_chapter.subchapters].index(current_subchapter.name)
-
+        subchapters = [c for c in current_chapter.subchapters if c.type == current_subchapter.type]
+        # current_subchapter_idx = [c.name for c in current_chapter.subchapters].index(current_subchapter.name)
+        current_subchapter_idx = [c.name for c in subchapters].index(current_subchapter.name)
         # можем ли перейти к предыдущему разделу главы:
         if current_subchapter_idx > 0:  # если это не первый раздел
             return reverse('open', args = [
                 self.current_place.author_name.full_name,
                 self.current_place.book.full_name,
                 self.chapters[current_chapter_idx].name,
-                "{}={}".format(self.chapters[current_chapter_idx].subchapters[current_subchapter_idx - 1].type,
-                               self.chapters[current_chapter_idx].subchapters[current_subchapter_idx - 1].name)
+                # "{}={}".format(self.chapters[current_chapter_idx].subchapters[current_subchapter_idx - 1].type,
+                #                self.chapters[current_chapter_idx].subchapters[current_subchapter_idx - 1].name)
+                "{}={}".format(current_subchapter.type, subchapters[current_subchapter_idx - 1].name)
             ])
         else:
-            # можем ли перйти к след. главе
+            # можем ли перйти к предыдущей главе
             # но тут нельзя просто выбрать "пред. главу, так как тогда мы перескачим на её начало - тут обработаем ручками
             if current_chapter_idx > 0:  # если это не первая
                 return reverse('open', args = [
