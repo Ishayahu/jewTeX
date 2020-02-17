@@ -8,15 +8,66 @@ from django.urls import reverse
 # import texts.authors
 # from texts.authors import normalize_author, normalize_book
 import cyrtranslit
-from texts.storage import Storage, Link, Content
+from texts.storage import Link, Content
+from texts.storage import Storage
 from texts.biblio import AuthorName, Book, get_author
+from django.utils.translation import get_language_from_request
+
+# TODO почистить старый код
 
 s = Storage(os.path.join(os.getcwd(), 'TEXTS_DB'))
+
+def process_text(text, xslt_path):
+    # преобразуем xml в нужный формат
+    # print(text)
+    from lxml.etree import XMLSyntaxError
+    try:
+        text = s.htmlizer(text, xslt_path)
+    except XMLSyntaxError as e:
+        print(e)
+        return text
+    # print(text)
+
+    # вставляем цитаты
+    quote_xslt_path = xslt_path.split(os.path.sep)
+    # print(os.path.sep)
+    # print(quote_xslt_path)
+    if not quote_xslt_path[-1].startswith('quote'):
+        quote_xslt_path[-1] = f'quote_{quote_xslt_path[-1]}'
+    quote_xslt_path = os.path.sep.join(quote_xslt_path)
+    quote_xslt_path = s.get_libraty_meta_filepath(quote_xslt_path)
+
+
+    # print(quote_xslt_path)
+    for quote_link, quote_tag in s.get_quotes(text):
+        quote_text = s.get_text_by_link(quote_link)
+        # print(quote_tag, quote_text)
+        # print(s.htmlizer(quote_text, quote_xslt_path))
+        try:
+            quote_text = process_text(quote_text, quote_xslt_path)
+            # quote_text = s.htmlizer(quote_text, quote_xslt_path)
+        except XMLSyntaxError as e:
+            print(e)
+        text = text.replace(quote_tag, f'"{quote_text}"')
+    # вставляем ссылки
+    for link, link_text, link_tag in s.get_links(text):
+        # print(link_tag, link_text)
+        url = reverse('text_api_request', args = (link.author_name.storage_id,
+                                                  link.book.storage_id,
+                                                  link.get_params()))
+        text = text.replace(link_tag,
+                            '<span class="ajax-block"><a href="#!" class="js-ajax-link" data-ajax-url="{url}">{name}</a></span>'.format(
+                                **{'url': url, 'name': link_text}))
+
+
+
+    return text
+
 
 from django.http import JsonResponse
 
 TEXTS_PATH = os.path.join(os.getcwd(),'TEXTS_DB')
-delimiters = '%'
+
 
 def close_unclosed_tags(text):
     temp_text = text
@@ -24,7 +75,7 @@ def close_unclosed_tags(text):
     closed_tags = []
     r = re.search(r'(</?([^>]+)>)', temp_text)
     while r:
-        print(r.groups())
+        # print(r.groups())
         tag, tag_name = r.groups()
         if tag[1] == '/':
             # ищем последнее вхождение этого тега и убираем его
@@ -47,7 +98,7 @@ def close_unclosed_tags(text):
     return text
 
 
-def htmlizer(text, link: Link):
+def htmlizer_old(text, link: Link):
     """
     Делаем из текста html. link - ссылка на запрос основной страницы, чтобы из контекста понять, какой комментарий нам нужен, например,
     раши на брейшис или шмойс
@@ -217,7 +268,7 @@ def demarking(text, link):
 
 
 
-def open_text(request, author, book, chapter_name, params):
+def open_text_old(request, author, book, chapter_name, params):
     # print(params)
     author_name = AuthorName(author)
     book = Book(book, author_name)
@@ -253,12 +304,64 @@ def open_text(request, author, book, chapter_name, params):
     context['prev'] = book_TOC.prev_subchapter_link()
     context['next'] = book_TOC.next_subchapter_link()
     return render(request, 'texts/open.html', context)
+def open_text(request, author, book, params):
+
+    lang = get_language_from_request(request)
+    # print(get_language_from_request(request))
+    author_name = AuthorName(author, s, lang)
+    book = Book(book, author_name, s, lang)
+    # book_TOC: Content = s.get_book_TOC(book)
+    book_TOC = s.get_book_TOC(book) # type:  Content
+
+    link = Link()
+    link.set_author_name(author_name)
+    link.set_book(book)
+    # link.set_chapter_name(chapter_name)
+    link.set_params(params)
+    # parser(link, author, book, params)
+    if not link.validate():
+        return HttpResponse("author = {}<p>book = {}<p>params = {}<hr />link = {}<hr />link_errors = {}".format(
+            author, book, params, link, link.errors))
+
+    text = s.get_text_by_link(link)
+    context = dict()
+    # TODO показывать локализованную информацию об авторе. Подумать , что делать если нет инфы на нужно м языке
+    context['title'] = f'{author_name.full_name}: {book.full_name}: {link.str_inside_book_position()}'
+    context['header'] = f'{author_name.full_name}: {book.full_name}: {link.str_inside_book_position()}'
+
+    # for openGraph
+    context['description'] = "{}...".format(demarking(text,link)[:200])
+    # context['title'] = "{}: {}".format(link.author_name.full_name, context.get('header',''))
+    # TODO время публикации и урл для опенграф
+    context['pulished_time'] = "{}".format("GET pulished_time")
+    context['url'] = "{}".format("GET URL")
+    # print(text)
+    xslt_path = s.get_xslt_path(link.book)
+    # print(text)
+    html = process_text(text, xslt_path)
+    # html = text
+
+
+    # print(html)
+    context['text'] = html
+    book_TOC.set_current_place(link)
+    context['up'] = reverse('book', kwargs={'author': link.author_name.storage_id,
+                                            'book': link.book.storage_id})
+    if book_TOC.prev_subchapter_params():
+        context['prev'] = reverse('open_from_xml', args=(link.author_name.storage_id,
+                                                     link.book.storage_id,
+                                                     book_TOC.prev_subchapter_params()))
+    if book_TOC.next_subchapter_params():
+        context['next'] = reverse('open_from_xml', args=(link.author_name.storage_id,
+                                                     link.book.storage_id,
+                                                     book_TOC.next_subchapter_params()))
+    return render(request, 'texts/open.html', context)
 
 
 def get_quote(author, book, params, refferer):
     # print(params)
-    author_name = AuthorName(author)
-    book = Book(book, author_name)
+    author_name = AuthorName(author, s)
+    book = Book(book, author_name, s)
 
     link = Link()
     link.set_author_name(author_name)
@@ -278,7 +381,9 @@ def get_quote(author, book, params, refferer):
     return "NOT FOUND"
 
 
-def api_request(request, author, book, chapter_name, params):
+# TODO генерировать odt документы. разобраться, почему они как с ошибкой и требуют восстановления
+
+def api_request_old(request, author, book, params):
     # print('api')
     # print(params)
 
@@ -287,7 +392,7 @@ def api_request(request, author, book, chapter_name, params):
     link = Link()
     link.set_author_name(author_name)
     link.set_book(book)
-    link.set_chapter_name(chapter_name)
+    # link.set_chapter_name(chapter_name)
     link.set_params(params)
 
     if not link.validate():
@@ -295,15 +400,50 @@ def api_request(request, author, book, chapter_name, params):
             author, book, params, link, link.errors))
 
     text = s.get_text_by_link(link)
-    html = htmlizer(text, link)
+    xslt_path = s.get_xslt_path(link.book)
+
+    html = process_text(text, xslt_path)
     html += "<p><a href='{}' target='_blank'>к книге</a></p>".format(link.get_url())
     author = get_author(author)
     return JsonResponse({'title': '{}:{}:{}'.format(author_name.short_name, book.short_name, link.short_str()), 'content': html, 'cardColor':
         author.css_class_name})
+def api_request(request, author, book, params):
+    # print('api')
+    # print(params)
+
+    author_name = AuthorName(author, s)
+    book = Book(book, author_name, s)
+    link = Link()
+    link.set_author_name(author_name)
+    link.set_book(book)
+    # link.set_chapter_name(chapter_name)
+    link.set_params(params)
+
+    if not link.validate():
+        return HttpResponse("author = {}<p>book = {}<p>params = {}<hr />link = {}<hr />link_errors = {}".format(
+            author, book, params, link, link.errors))
+
+    text = s.get_text_by_link(link)
+    xslt_path = s.get_xslt_path(link.book)
+
+    html = process_text(text, xslt_path)
+    html += "<p><a href='{}' target='_blank'>к книге</a></p>".format(link.get_url())
+    author = get_author(author)
+
+    lang = get_language_from_request(request)
+    title = '{} {}:{}:{}'.format(
+        author_name.info[lang]['first_name']['value'],
+        author_name.info[lang]['last_name']['value'],
+        book.info[lang]['full_name']['value'],
+        link.short_str())
+    return JsonResponse({'title': title, 'content': html, 'cardColor':
+        author.css_class_name})
 
 
 def index(request):
-    authors = s.get_authors()
+
+    language_code = get_language_from_request(request)
+    authors = s.get_authors(language_code)
     # authors = get_authors()
     return render(request, 'texts/index.html', {
         'authors':authors, 'title': "Список авторов"
@@ -311,7 +451,8 @@ def index(request):
 
 
 def author(request, author):
-    author = AuthorName(author)
+    language_code = get_language_from_request(request)
+    author = AuthorName(author, s, language_code)
     books = s.get_books_for_author(author)
     info = s.get_author_info(author)
     return render(request, 'texts/author.html', {
@@ -320,12 +461,18 @@ def author(request, author):
 
 
 def book(request, author, book):
-    author = AuthorName(author)
-    book = Book(book, author)
-    info = s.get_book_info(book)
+    language_code = get_language_from_request(request)
+    author = AuthorName(author, s, language_code)
+    book = Book(book, author, s, language_code)
+    info = book.info['about']['value']
     content = s.get_book_TOC(book)
+    # print(content.items)
+    lang = get_language_from_request(request)
+    title = "Содержание книги {} от {} {}".format(book.info[lang]['full_name']['value'],
+                                                  author.info[lang]['first_name']['value'],
+                                                  author.info[lang]['last_name']['value'])
     return render(request, 'texts/book.html', {
-        'content':content, 'author': author, 'book': book, 'title': "Содержание книги {} от {}".format(book, author), 'info':info,
+        'content':content, 'author': author, 'book': book, 'title': title, 'info':info,
     })
 
 def terms_to_define(request):
@@ -342,10 +489,11 @@ def terms_to_define(request):
                         if term_definition == 'DEFINITION NOT FOUND':
                             result.append([filepath, term, term_definition])
                         else:
-                            print(term_definition)
+                            pass
+                            # print(term_definition)
 
-    for k in result:
-        print(k)
+    # for k in result:
+        # print(k)
 
     terms = {i[1] for i in result}
 

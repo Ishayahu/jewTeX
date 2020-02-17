@@ -3,7 +3,7 @@
 <body>
     <ul>
         {% for author in authors %}
-            <li><a href="{% url 'author' author.full_name %}">{{ author }}</a></li>
+            <li><a href="{% url 'author' author.author_storage_id %}">{{ author }}</a></li>
         {% endfor %}
     </ul>
 

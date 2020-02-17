@@ -140,6 +140,10 @@ aside {
 .term{
   font-style: italic;
 }
-.need_work{
+.link_needed{
   background-color: red;
+}
+.work_needed{
+  color: red;
+  background-color: lightgrey;
 }

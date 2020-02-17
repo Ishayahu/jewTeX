@@ -1,94 +1,119 @@
 # -*- coding: utf-8 -*-
 import cyrtranslit
 from django.urls import reverse
-
-
+# from texts.storage import XMLStorage as Storage
+from typing import Optional
 class AuthorName:
 
-    author_kitzur = {'taz': 'david_halevi_segal',
-                     'shah': 'shabbatai_hakohen',
-                     'tur': 'jacob_ben_asher',
-                     'hamechaber': 'joseph_karo',
-                     'maran': 'joseph_karo',
-                     'smak': 'isaac_ben_joseph_of_corbeil',
-                     'terumat_hadeshen': 'israel_isserlein_ben_petachia',
-                     'rif': 'isaac_ben_jacob_alfasi_ha_cohen',
-                     'talmud': 'talmud',
-                     'rosh': 'asher_ben_jehiel',
-                     }
+    # author_kitzur = {'taz': 'david_halevi_segal',
+    #                  'shah': 'shabbatai_hakohen',
+    #                  'tur': 'jacob_ben_asher',
+    #                  'hamechaber': 'joseph_karo',
+    #                  'maran': 'joseph_karo',
+    #                  'smak': 'isaac_ben_joseph_of_corbeil',
+    #                  'terumat_hadeshen': 'israel_isserlein_ben_petachia',
+    #                  'rif': 'isaac_ben_jacob_alfasi_ha_cohen',
+    #                  'talmud': 'talmud',
+    #                  'rosh': 'asher_ben_jehiel',
+    #                  }
 
-    author2kitzur = {v: k for k, v in author_kitzur.items()}
+    # author2kitzur = {v: k for k, v in author_kitzur.items()}
 
-    def __init__(self, name):
-        self.full_name = self.__get_full_name(name)
-        self.short_name = self.__get_short_name(name)
+    def __init__(self, storage_id, s, language_code='ru'):
+        self.__language_code = language_code
+        self.storage_id = storage_id
+        self.info = s.get_author_info(self)
+        self.full_name = self.__get_full_name()
+        self.short_name = self.__get_short_name()
 
-    @staticmethod
-    def __get_full_name(name):
-        name = name.lower()
-        name = cyrtranslit.to_latin(name, 'ru')
-        return AuthorName.author_kitzur.get(name, name)
+    def get_localized_info(self):
+        return self.info[self.__language_code]
 
-    @staticmethod
-    def __get_short_name(name):
-        name = name.lower()
-        name = cyrtranslit.to_latin(name, 'ru')
-        return AuthorName.author2kitzur.get(name, name)
+    def __get_full_name(self):
+        i = self.get_localized_info()
+        return f"{i['title']['value']} {i['last_name']['value']} {i['first_name']['value']} ({i['short_name']['value']})"
+
+
+
+    def __get_short_name(self):
+        i = self.get_localized_info()
+        if i['short_name']['value']:
+            return f"{i['title']['value']} {i['short_name']['value']}"
+        else:
+            return self.__get_full_name()
 
     # что комментировал
 
     def __eq__(self, other):
         if isinstance(other, AuthorName):
-            return self.full_name == other.full_name
+            return self.storage_id == other.storage_id
         else:
             return False
 
     def __repr__(self):
-        return str(self)
+        return str(self.storage_id)
 
     def __str__(self):
-        return "<AuthorName:{} ({})>".format(self.full_name, self.short_name)
+        if self.full_name.strip()!='()':
+            return f"{self.full_name}"
+        else:
+            return f"{self.storage_id}"
 
 
 class Book:
 
-    book_kitzur = {'sha1': 'shulchan_aruch_orach_chayim',
-                   'sha2': 'shulchan_aruch_yoreh_deah',
-                   'sha3': 'shulchan_aruch_even_haezer',
-                   'sha4': 'shulchan_aruch_choshen_mishpat',
-                   'smak': 'sefer_mitzvot_katan',
-                   'rif_bejca': 'sefer_ha_halachot_al_bejca',
-                  }
-    book2kitzur = {v: k for k, v in book_kitzur.items()}
+    """
+    У нас отдельно хранится инфа о книге, которая отображается и отедльно - её id в стораже, который используется в реквестах
+    """
 
-    def __init__(self, name: str, author: AuthorName):
-        self.full_name = Book.__get_full_name(name)
-        self.short_name = Book.__get_short_name(name)
+    # book_kitzur = {'sha1': 'shulchan_aruch_orach_chayim',
+    #                'sha2': 'shulchan_aruch_yoreh_deah',
+    #                'sha3': 'shulchan_aruch_even_haezer',
+    #                'sha4': 'shulchan_aruch_choshen_mishpat',
+    #                'smak': 'sefer_mitzvot_katan',
+    #                'rif_bejca': 'sefer_ha_halachot_al_bejca',
+    #               }
+    # book2kitzur = {v: k for k, v in book_kitzur.items()}
+
+    def __init__(self, storage_id: str, author: AuthorName, s, language_code = 'ru'):
+        self.__language_code = language_code
         self.author = author
+        self.storage_id = storage_id
+        self.info = s.get_book_info(self)
+        self.full_name = self.__get_full_name()
+        self.short_name = self.__get_short_name()
 
-    @staticmethod
-    def __get_full_name(name):
-        name = name.lower()
-        name = cyrtranslit.to_latin(name, 'ru')
-        return Book.book_kitzur.get(name, name)
+    def get_localized_info(self):
+        return self.info[self.__language_code]
 
-    @staticmethod
-    def __get_short_name(name):
-        name = name.lower()
-        name = cyrtranslit.to_latin(name, 'ru')
-        return Book.book2kitzur.get(name, name)
+    def __get_full_name(self):
+        i = self.get_localized_info()
+        if i['short_name']['value']:
+            return f"{i['full_name']['value']} ({i['short_name']['value']})"
+        else:
+            return f"{i['full_name']['value']}"
+
+    def __get_short_name(self):
+        i = self.get_localized_info()
+        if i['short_name']['value']:
+            return f"{i['short_name']['value']}"
+        else:
+            return self.__get_full_name()
 
     def __eq__(self, other):
         if isinstance(other, Book):
-            return self.full_name == other.full_name and self.author == other.author
+            return self.storage_id == other.storage_id and self.author == other.author
         else:
             return False
 
     def __repr__(self):
-        return str(self)
+        return str(self.storage_id)
 
     def __str__(self):
-        return "<Book:{}@{}>".format(self.full_name, self.author)
+        if self.full_name.strip():
+            return f"{self.full_name}"
+        else:
+            return f"{self.storage_id}"
 
 
 def get_author(author_name):
