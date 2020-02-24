@@ -116,15 +116,15 @@ class Book:
             return f"{self.storage_id}"
 
 
-def get_author(author_name):
-    author_color = {
-        AuthorName('таз').full_name: 'yellow',
-        AuthorName('шах').full_name: 'green',
-               }
-    a = Author()
-    a.author_name = AuthorName(author_name)
-    a.css_class_name = author_color.get(a.author_name.full_name,'grey')
-    return a
+# def get_author(author_name):
+#     author_color = {
+#         AuthorName('таз').full_name: 'yellow',
+#         AuthorName('шах').full_name: 'green',
+#                }
+#     a = Author()
+#     a.author_name = AuthorName(author_name)
+#     a.css_class_name = author_color.get(a.author_name.full_name,'grey')
+#     return a
 
 # def get_author_old(author_name):
 #     authors = {

@@ -3,7 +3,8 @@
 <body>
     <ul>
         {% for author in authors %}
-            <li><a href="{% url 'author' author.author_storage_id %}">{{ author }}</a></li>
+            <li><a href="{% url 'author' author.storage_id %}">{{ author }}</a></li>
+{#            <li>{{ author.storage_id }} / {{ author }}</li>#}
         {% endfor %}
     </ul>
 

@@ -10,19 +10,22 @@ import os
 import re
 import xml.etree.ElementTree as ET
 from lxml import etree
-from texts.biblio import AuthorName, Book, get_author
+from texts.biblio import AuthorName, Book
 
 delimiters = '%'
 # part = абзац, мысль
 _all_fields = ['author', 'book', 'siman', 'chapter', 'klal', 'sub_chapter', 'seif',
                'din', 'page', 'dibur_amathil', 'siman_katan', 'question', 'mishna', 'perek', 'amud', 'mizva', 'part']
+_all_fields_ru = ['author', 'book', 'siman', 'chapter', 'klal', 'sub_chapter', 'сеиф',
+               'закон', 'стр', 'дибур аматхиль', 'симан катан', 'вопрос', 'мишна', 'perek', 'лист', 'заповедь', 'часть']
 
 
-class _FilseStorage:
+class _FileStorage:
     # все поля используются
     book_level = ['author', 'book', ]
     # используется только одно поле!
     chapter_level = ['siman', 'klal', 'page', 'perek','mizva']
+    chapter_level_ru = ['симан', 'клаль', 'стр.', 'глава','заповедь']
     # то, что может быть как главой, так и разделом внутри главы. Например, книга иногда может делиться на страницы (как талмуд),
     # а иногда на заповеди (как у Рамбама), и тогда делится делится на страницы внутри заповеди
     can_be_intext = ['mizva', 'page']
@@ -42,8 +45,8 @@ class Linkv1:
         self.errors = []  # type: list
         self.params = None  # type: str
 
-        self.fs_level_param_names = _FilseStorage.chapter_level
-        self.intext_param_names = _FilseStorage.subchapter_level
+        self.fs_level_param_names = _FileStorage.chapter_level
+        self.intext_param_names = _FileStorage.subchapter_level
     def __repr__(self):
         return "{}|{}|{}|{}".format(self.author_name, self.book, self.chapter_name, self.params)
     def set_author_name(self, author_name: AuthorName):
@@ -170,15 +173,29 @@ class Link:
         self.daf = ''  # type: str
         self.raw_params = ''  # type: str
     def __repr__(self):
-        return "{}|{}|{}|{}".format(self.author_name, self.book, self.chapter_name, self.params)
+        return "{}|{}|{}".format(self.author_name, self.book, self.params)
     def str_inside_book_position(self):
-        return f"{self.raw_params}"
+        params_dict = dict()
+        r = ""
+        for k,v in self.params:
+            params_dict[k] = v
+        for idx,chapter_type in enumerate(_FileStorage.chapter_level):
+            if chapter_type in params_dict.keys():
+                r+= f"{_FileStorage.chapter_level_ru[idx]} {params_dict[chapter_type]}"
+                del params_dict[chapter_type]
+        for k,v in params_dict.items():
+            idx = _all_fields.index(k)
+            r+= f", {_all_fields_ru[idx]} {v}"
+        return r
+
+
+
     def set_author_name(self, author_name: AuthorName):
         self.author_name = author_name
 
     def get_url(self):
-        return reverse('open_from_xml', args=(self.author_name.full_name,
-                                     self.book.full_name,
+        return reverse('open_from_xml', args=(self.author_name.storage_id,
+                                     self.book.storage_id,
                                      self.get_params()))
 
     def set_book(self, book: Book):
@@ -795,21 +812,21 @@ class FileStorage:
         self.texts_path = db_path
         # print(self.texts_path)
         # FIXME должно быть объявлено в классе обработчика инфы - надо поудмать, как это правильно указать
-        self.info_filename = None
+        self.info_filename = 'info'
 
     def get_xslt_path(self, book: Book, output_type='html') -> str:
-        p = os.path.join(self.texts_path, book.author.full_name, book.full_name, 'meta', f'{output_type}.xslt')
+        p = os.path.join(self.texts_path, book.author.full_name, book.full_name, '.meta', f'{output_type}.xslt')
         # Если для книги нет xslt файла для такго формата - используем файл общий для всего хранилища
         if os.path.exists(p):
             return p
         else:
-            return os.path.join(self.texts_path, 'meta', f'{output_type}.xslt')
+            return os.path.join(self.texts_path, '.meta', f'{output_type}.xslt')
 
     def get_libraty_meta_filepath(self, full_filename):
         if full_filename:
             return full_filename
         filename = full_filename.split(os.path.sep)[-1]
-        return os.path.join(self.texts_path, 'meta', filename)
+        return os.path.join(self.texts_path, '.meta', filename)
     def get_book_text(self, book: Book) -> List[str]:
         result = []
         # на случай если надо искать что-то внутри других элементов, короче по параметрам
@@ -859,7 +876,22 @@ class FileStorage:
             with open(os.path.join(self.texts_path, author.storage_id, self.info_filename), 'r', encoding = 'utf8') as f:
                 r = f.read()
         except:
-            pass
+            with open(os.path.join(self.texts_path, author.storage_id, self.info_filename), 'w', encoding = 'utf8') as f:
+                r = f"""<?xml version="1.0" standalone="yes"?>
+<info>
+    <ru>
+        <title></title>
+        <first_name>{author.storage_id}</first_name>
+        <last_name></last_name>
+        <short_name>{author.storage_id}</short_name>
+    </ru>
+	<display>
+		<css_class_name>default</css_class_name>
+	</display>
+</info>
+
+"""
+                f.write(r)
         return r
 
     def load_book_info(self, book: Book):
@@ -871,11 +903,23 @@ class FileStorage:
                                    self.info_filename), 'r', encoding = 'utf8') as f:
                 r = f.read()
         except:
-            pass
+            with open(os.path.join(self.texts_path,
+                                   book.author.storage_id,
+                                   book.storage_id,
+                                   self.info_filename), 'w', encoding = 'utf8') as f:
+                r = f"""<?xml version="1.0" standalone="yes"?>
+<info>
+    <ru>
+        <full_name>{book.storage_id}</full_name>
+        <short_name>{book.storage_id}</short_name>
+    </ru>
+</info>
+"""
+                f.write(r)
         return r
 
 
-class XMLStorage:
+class XMLFormat:
     """
     Класс, обслуживающий хранилище текстов. К нему обращаются по человечески, а он уже ищет текст там, где он лежит и возвращает его
     """
@@ -884,10 +928,11 @@ class XMLStorage:
         self.fields2chapters = None
         # если храниение в виде файлов
         self.texts_path = texts_path
+        self.info_filename_ext = 'xml'
 
 
         if self.texts_path:
-            self.fields2chapters = _FilseStorage()
+            self.fields2chapters = _FileStorage()
 
     def extract_toc_elements_form_xml(self, root):
         result = []
@@ -1053,6 +1098,10 @@ class XMLStorage:
             link.set_author_name(AuthorName(element.attrib['author'], self))
             link.set_book(Book(element.attrib['book'], link.author_name, self))
             params = element.keys()
+            link.upper = False
+            if 'upper' in params:
+                link.upper = True
+                params.pop(params.index('upper'))
             params.pop(params.index('author'))
             params.pop(params.index('book'))
             for key in params:
@@ -1146,18 +1195,33 @@ class AllwaysDictDict:
     # def __str__ (self):
     #     return ""
 
-class Storage(FileStorage, XMLStorage):
+class Storage(FileStorage, XMLFormat):
 
 
     def __init__(self, db_path):
         # TODO разобраться почему так
-        FileStorage.__init__(self, db_path)
-        XMLStorage.__init__(self)
+
+        class ConfigurationError(Exception):
+            pass
+        storage_class_name = None
+        format_class_name = None
+        for c in self.__class__.__bases__:
+            if c.__name__.endswith('Format'):
+                format_class_name = c.__name__
+            elif c.__name__.endswith("Storage"):
+                storage_class_name = c.__name__
+        if not format_class_name and not storage_class_name:
+            raise ConfigurationError("Не указаны классы хранилища и/или формата")
+        # FileStorage.__init__(self, db_path)
+        # XMLFormat.__init__(self)
+        globals()[storage_class_name].__init__(self, db_path)
+        globals()[format_class_name].__init__(self)
         # print(self.texts_path)
         self.texts_path = db_path
         # print(self.texts_path)
         # FIXME надо подумать, можно ли автоматом понимать, какой клас подмешен
-        self.info_filename = XMLStorage.info_filename
+
+        self.info_filename = XMLFormat.info_filename
 
     def get_text_by_link(self, link: Link) -> str:
         full_book_text = self.get_book_text(link.book)
