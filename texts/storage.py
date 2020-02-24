@@ -815,7 +815,7 @@ class FileStorage:
         self.info_filename = 'info'
 
     def get_xslt_path(self, book: Book, output_type='html') -> str:
-        p = os.path.join(self.texts_path, book.author.full_name, book.full_name, '.meta', f'{output_type}.xslt')
+        p = os.path.join(self.texts_path, book.author.storage_id, book.storage_id, '.meta', f'{output_type}.xslt')
         # Если для книги нет xslt файла для такго формата - используем файл общий для всего хранилища
         if os.path.exists(p):
             return p
