@@ -59,13 +59,37 @@
     {% endif %}
 
     <footer>
-      &copy; 2019 LaSil
+      &copy; 2019-2021 LaSil
     </footer>
 
   </div>
 
   <div class="modals-wrapper"></div>
-  
+  <script>
+	$(document).ready(function(){
+		$(".comment_text").each(function(){
+			let number = $(this).attr('id');
+			if (number){
+				$(this).hide()
+			}
+		});
+		$("sup").each(function(){
+			let number = $(this).attr('id');
+			if (number){
+				number = number.replace("sup",'');
+				$(this).click(function(){
+					let comment = $(`#comment${number}`);
+					if(comment.is(":hidden")){
+						$(`#comment${number}`).show();
+					}else{
+						$(`#comment${number}`).hide();
+					}
+				})
+			}
+			
+		});
+	})
+  </script>
 </body>
 {% load static %}
 <script src="{% static "texts/js/main.js" %}"></script>

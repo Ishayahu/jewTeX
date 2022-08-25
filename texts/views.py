@@ -7,7 +7,7 @@ from django.template import loader
 from django.urls import reverse
 # import texts.authors
 # from texts.authors import normalize_author, normalize_book
-import cyrtranslit
+# import cyrtranslit
 from texts.storage import Link, Content
 from texts.storage import Storage
 from texts.biblio import AuthorName, Book
@@ -51,18 +51,23 @@ def process_text(text, xslt_path):
         text = text.replace(quote_tag, f'"{quote_text}"')
     # вставляем ссылки
     for link, link_text, link_tag in s.get_links(text):
+        import re
+        # print("*"*50)
         # print(link_tag, link_text)
+        # print(link_tag)
         url = reverse('text_api_request', args = (link.author_name.storage_id,
                                                   link.book.storage_id,
                                                   link.get_params()))
-
-        replace_link_to  = f'<span class="ajax-block"><a href="#!" class="js-ajax-link" data-ajax-url="{url}">{link_text}</a></span>'
+        # print(url)
+        replace_link_to = f'<span class="ajax-block"><a href="#!" class="js-ajax-link" data-ajax-url="{url}">{link_text}</a></span>'
         if link.upper:
             replace_link_to = '<sup>'+replace_link_to+'</sup>'
-        text = text.replace(link_tag,replace_link_to)
+        # print('->', replace_link_to)
+        # text = text.replace(link_tag, replace_link_to)
+        text = re.sub(rf"<link[^<]*>{link_text}</link>", replace_link_to, text)
 
 
-
+    # print(text[-300:])
     return text
 
 
@@ -386,7 +391,12 @@ def open_text(request, author, book, params):
     context['header'] = f'{author_name.full_name}: {book.full_name}: {link.str_inside_book_position()}'
     xslt_path = s.get_xslt_path(link.book)
     # for openGraph
-    context['description'] = "{}...".format(demarking(text,s.get_xslt_path(link.book,'quote_html'))[:200])
+    try:
+        context['description'] = "{}...".format(demarking(text,s.get_xslt_path(link.book,'quote_html'))[:200])
+    except AttributeError:
+        print('views.397')
+        print(text)
+        context['description'] = ''
     # context['title'] = "{}: {}".format(link.author_name.full_name, context.get('header',''))
     # TODO время публикации и урл для опенграф
     context['pulished_time'] = "{}".format("GET pulished_time")
@@ -478,10 +488,12 @@ def api_request(request, author, book, params):
     if not link.validate():
         return HttpResponse("author = {}<p>book = {}<p>params = {}<hr />link = {}<hr />link_errors = {}".format(
             author, book, params, link, link.errors))
-
+    # print(link)
     text = s.get_text_by_link(link)
     xslt_path = s.get_xslt_path(link.book)
-
+    # print("-"*50)
+    # print(text)
+    # print("-"*50)
     html = process_text(text, xslt_path)
     html += "<p><a href='{}' target='_blank'>к книге</a></p>".format(link.get_url())
     # author = get_author(author)
@@ -492,6 +504,7 @@ def api_request(request, author, book, params):
         author_name.info[lang]['last_name']['value'],
         book.info[lang]['full_name']['value'],
         link.str_inside_book_position())
+
     return JsonResponse({'title': title, 'content': html, 'cardColor':
         author_name.info['display']['css_class_name']['value']})
 
@@ -500,6 +513,7 @@ def index(request):
 
     language_code = get_language_from_request(request)
     authors = s.get_authors(language_code)
+
     # authors = get_authors()
     return render(request, 'texts/index.html', {
         'authors':authors, 'title': "Список авторов"
@@ -517,18 +531,37 @@ def author(request, author):
 
 
 def book(request, author, book):
+    from django.template.loader import render_to_string
+    import uuid
     language_code = get_language_from_request(request)
     author = AuthorName(author, s, language_code)
     book = Book(book, author, s, language_code)
     info = book.info['about']['value']
     content = s.get_book_TOC(book)
+    def make_html_TOC(elements):
+        def makeuuid(element):
+            result = uuid.uuid4()
+            return result.hex
+        if elements:
+            rendered = ''
+            for element in elements:
+                rendered += render_to_string('texts/html_toc.html', {'element': element, 'element_id': makeuuid(element), 'author': author, 'book': book})
+                rendered += make_html_TOC(element.children)
+                if element.children:
+                    rendered += '</ol>'
+            return rendered
+        else:
+            return ''
+
+    html_toc = make_html_TOC(content.items)
+
     # print(content.items)
     lang = get_language_from_request(request)
     title = "Содержание книги {} от {} {}".format(book.info[lang]['full_name']['value'],
                                                   author.info[lang]['first_name']['value'],
                                                   author.info[lang]['last_name']['value'])
     return render(request, 'texts/book.html', {
-        'content':content, 'author': author, 'book': book, 'title': title, 'info':info,
+        'content':content,'html_toc':html_toc, 'author': author, 'book': book, 'title': title, 'info':info,
     })
 
 def terms_to_define(request):
@@ -620,3 +653,70 @@ def not_translated(request):
 #     return render(request, 'texts/need_to_be_done.html', {
 #         'result':result, 'title': "Надо перевести"
 #     })
+
+def search(request):
+    if request.method!='POST':
+        raise ImportError()
+    a = request.POST
+    search_string = request.POST.get('search_string','')
+    if not search_string:
+        raise ImportError()
+    from pathlib import Path
+    from lxml import etree
+    # find = etree.XPath(f"//p[re:test(.,'{search_string}','i')]",
+    #                    namespaces={'re': "http://exslt.org/regular-expressions"})
+    find = etree.XPath(f"//p[re:test(.,'{search_string}','i')] | //p[re:test(.,'{search_string}','i')]",
+                       namespaces={'re': "http://exslt.org/regular-expressions"})
+    # db_path = r'D:\YandexDisk\Sites\jewTeX\TEXTS_DB'
+    found = []
+    def check_out_path(target_path, level=0):
+        """"
+        This function recursively prints all contents of a pathlib.Path object
+        """
+        for file in target_path.iterdir():
+            if file.is_dir():
+                check_out_path(file, level + 1)
+            else:
+                if file.name.endswith('.xml'):
+                    content = None
+                    with open(file,'r',encoding='utf8') as f:
+                        content = f.read()
+                    if content:
+                        root = etree.XML(content)
+                        # TODO: везде ли у меня всё в p?
+                        for e in find(root):
+                            found.append((file,e))
+
+    my_path = Path(s.texts_path)
+    check_out_path(my_path)
+    result = []
+    class Link:
+        def __init__(self):
+            self.author = None
+            self.book = None
+            self.link = None
+            self.text = None
+    for file,e in found:
+        author = file.parts[-3]
+        book = file.parts[-2]
+        l = Link()
+        l.author = author
+        l.book = book
+        l.text = e.text
+
+        tmp = []
+        while e.tag !='content':
+            if e.tag == 'header':
+                tmp.append((e.attrib['type'], e.attrib['name']))
+            e = e.getparent()
+        tmp.reverse()
+        ll = ''
+        for k,v in tmp:
+            ll+=f"{k}={v}&"
+        ll = ll[:-1]
+        l.link = ll
+        result.append(l)
+
+    return render(request, 'texts/found.html', {
+        'found':result, 'title': "Найдено"
+    })

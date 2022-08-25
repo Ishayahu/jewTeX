@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import cyrtranslit
+# import cyrtranslit
 from django.urls import reverse
 # from texts.storage import XMLStorage as Storage
 from typing import Optional
@@ -31,8 +31,10 @@ class AuthorName:
 
     def __get_full_name(self):
         i = self.get_localized_info()
-        return f"{i['title']['value']} {i['last_name']['value']} {i['first_name']['value']} ({i['short_name']['value']})"
-
+        if i['short_name']['value']:
+            return f"{i['title']['value']} {i['last_name']['value']} {i['first_name']['value']} ({i['short_name']['value']})"
+        else:
+            return f"{i['title']['value']} {i['last_name']['value']} {i['first_name']['value']}"
 
 
     def __get_short_name(self):

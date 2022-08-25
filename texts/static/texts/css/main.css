@@ -142,11 +142,40 @@ aside {
 /* by ishayahu*/
 .term{
   font-style: italic;
+  text-decoration: underline;
 }
 .link_needed{
   background-color: red;
 }
 .work_needed{
-  color: red;
+  /* color: red; */
   background-color: lightgrey;
+}
+.comment {
+  font-size: small;
+  font-style: italic;
+}
+.possible_comment{
+  font-size: small;
+  font-style: italic;
+  color: darkred;
+}
+
+.comment_needed{
+  font-size: small;
+  font-style: italic;
+  background-color: lightgrey;
+}
+.comment_needed_reason{
+  font-size: small;
+  font-style: italic;
+  background-color: lightgrey;
+  color: red;
+}
+.quote{
+	padding-left: 10px;
+	border-left: 1px dotted black;
+}
+sup{
+	cursor: pointer;
 }

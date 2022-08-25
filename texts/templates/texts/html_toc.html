@@ -1,0 +1,5 @@
+<li><a href="{% url 'open_from_xml' author.storage_id book.storage_id element.get_link_params %}">{{ element | safe}}</a></li>
+{% if element.children %}
+    <div id="{{ element_id }}_control" data_id="{{ element_id }}" class="control">...</div>
+    <ol id="{{ element_id }}" style="display: none">
+{% endif %}

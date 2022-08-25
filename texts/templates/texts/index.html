@@ -1,12 +1,18 @@
 {% extends 'texts/base.html' %}
 {% block body %}
 <body>
+    <div class="container">
+    <form action="/utils/search/" method="post">
+        {% csrf_token %}
+        <input type="text" name="search_string" />
+        <input type="submit" value="Искать">
+    </form>
     <ul>
         {% for author in authors %}
             <li><a href="{% url 'author' author.storage_id %}">{{ author }}</a></li>
 {#            <li>{{ author.storage_id }} / {{ author }}</li>#}
         {% endfor %}
     </ul>
-
+    </div>
 </body>
 {% endblock %}

@@ -2,7 +2,7 @@
 # from typing import List, Optional, Callable, ClassVar
 from texts.biblio import AuthorName, Book
 import texts.biblio
-import cyrtranslit
+# import cyrtranslit
 from django.urls import reverse
 from typing import *
 
@@ -12,12 +12,16 @@ import xml.etree.ElementTree as ET
 from lxml import etree
 from texts.biblio import AuthorName, Book
 
+# TODO не отрабатываются <p offset...> надо сделать в html.xslt
+
 delimiters = '%'
 # part = абзац, мысль
 _all_fields = ['author', 'book', 'siman', 'chapter', 'klal', 'sub_chapter', 'seif',
-               'din', 'page', 'dibur_amathil', 'siman_katan', 'question', 'mishna', 'perek', 'amud', 'mizva', 'part']
+               'din', 'page', 'dibur_amathil', 'siman_katan', 'question', 'mishna', 'perek', 'amud', 'mizva', 'part',
+               'letter', 'gate','posuk', 'daf']
 _all_fields_ru = ['author', 'book', 'siman', 'chapter', 'klal', 'sub_chapter', 'сеиф',
-               'закон', 'стр', 'дибур аматхиль', 'симан катан', 'вопрос', 'мишна', 'perek', 'лист', 'заповедь', 'часть']
+               'закон', 'стр', 'дибур аматхиль', 'симан катан', 'вопрос', 'мишна', 'perek', 'лист', 'заповедь', 'часть',
+                  'буква', 'врата','стих','лист']
 
 
 class _FileStorage:
@@ -178,7 +182,10 @@ class Link:
         params_dict = dict()
         r = ""
         for k,v in self.params:
-            params_dict[k] = v
+            if k!='xmlns':
+                params_dict[k] = v
+
+        # print(params_dict)
         for idx,chapter_type in enumerate(_FileStorage.chapter_level):
             if chapter_type in params_dict.keys():
                 r+= f"{_FileStorage.chapter_level_ru[idx]} {params_dict[chapter_type]}"
@@ -209,7 +216,8 @@ class Link:
             elif k == 'daf':
                 self.daf = v
             else:
-                self.params.append((k,v))
+                if k!='xmlns':
+                    self.params.append((k,v))
     def set_param(self, key: str, value: str):
         if self.raw_params:
             self.raw_params += "&"
@@ -219,7 +227,8 @@ class Link:
         elif key == 'daf':
             self.daf = value
         else:
-            self.params.append((key,value))
+            if key!='xmlns':
+                self.params.append((key,value))
     def get_params(self):
         r = ''
         for k,v in self.params:
@@ -316,6 +325,7 @@ class ContentItem:
         self.level = None
         self.type = None
         self.name = None
+        self.children = []
         self.parents = ''
         self.verbouse_name = ''
     def populate_from_xml_element(self, element):
@@ -328,6 +338,8 @@ class ContentItem:
         else:
             self.type = element.attrib['type']
         self.name = element.attrib['name']
+        if 'number' in element.attrib:
+            self.number = element.attrib['number']
         if 'verbouse_name' in element.attrib:
             self.verbouse_name = element.attrib['verbouse_name']
         if element.tag not in ('page','daf'):
@@ -335,7 +347,8 @@ class ContentItem:
             # print(parent)
             while parent is not None:
                 if 'type' in parent.attrib and 'name' in parent.attrib:
-                    self.parents += f"{parent.attrib['type']}={parent.attrib['name']}&"
+                    self.parents = f"{parent.attrib['type']}={parent.attrib['name']}&"+self.parents
+                    # self.parents += f"{parent.attrib['type']}={parent.attrib['name']}&"
                 parent = parent.getparent()
                 # print(parent)
             if self.parents:
@@ -355,6 +368,15 @@ class ContentItem:
             return f"{self.parents}&{self.type}={self.name}"
         else:
             return f"{self.type}={self.name}"
+    # def toString(self):
+        # result = ''
+        # if not self.parents:
+            # result =  f"{self.type} <!-- ToC level: {self.level}-->: {self.name}"
+        # else:
+            # result = f"{self.parents}|{self.type} ({self.level}): {self.name}"
+        # if self.verbouse_name:
+            # result += f" {self.verbouse_name}"
+        # return result
     def __str__(self):
         result = ''
         if not self.parents:
@@ -541,6 +563,7 @@ class Content:
     def add_item(self, item: ContentItem):
         if item not in self.items:
             self.items.append(item)
+        # self.items = sorted(self.items,key = lambda x: x.name)
 
 
     def set_current_place(self, link: Link):
@@ -650,7 +673,7 @@ class Content:
 
     def next_subchapter_params(self):
         if self.current_place_idx is not None:
-            if self.current_place_idx < len(self.items):
+            if self.current_place_idx < len(self.items)-1:
                 return self.items[self.current_place_idx+1].as_url_params()
         return ''
 
@@ -855,10 +878,10 @@ class FileStorage:
         """
         Возвращает список авторов, чьи книги доступны
         """
-        return [AuthorName(full_name, self, language_code) for full_name in os.listdir(self.texts_path) if
+        result = [AuthorName(full_name, self, language_code) for full_name in os.listdir(self.texts_path) if
                     not full_name.startswith('.')
                     and os.path.isdir(os.path.join(self.texts_path,full_name))]
-
+        return sorted(result, key=lambda x: x.info['ru']['last_name']['value'])
 
     def get_books_for_author(self, author: AuthorName):
         """
@@ -938,7 +961,17 @@ class XMLFormat:
         result = []
         children = root.getchildren()
         for child in children:
-            if child.tag in ('header','page','daf'):
+            if child.tag in ('header',):
+                # Для хидеров мы пропускам все хидеры, которые обозначают место для ссылки
+                # TODO временный хак, надо понять как должно быть
+                try:
+                    if child.attrib['type'] in ('ref', 'girsa'):
+                        pass
+                    else:
+                        result.append(child)
+                except KeyError:
+                    pass
+            elif child.tag in ('page', 'daf'):
                 result.append(child)
             r = self.extract_toc_elements_form_xml(child)
             result += r
@@ -951,6 +984,7 @@ class XMLFormat:
         Возвращает содержание книги
         """
         content = Content()
+        toc_elements = []
         for text in text_tuple:
             root = etree.fromstring(text)
             # root = ET.fromstring(text)
@@ -959,11 +993,86 @@ class XMLFormat:
             # pages_elements = root.findall('.//page')
             # daf_elements = root.findall('.//daf')
             # toc_elements.sort(key= lambda x: int(x.attrib['level']))
-            toc_elements = self.extract_toc_elements_form_xml(root)
-            for element in toc_elements:
-                item = ContentItem()
-                item.populate_from_xml_element(element)
-                content.add_item(item)
+            # выбираем все элементы, которые должны быть в содержании
+            t_toc_elements = self.extract_toc_elements_form_xml(root)
+            # сортируем элементы содержания, исходя из предположения что они
+            toc_elements += t_toc_elements
+
+        def get_sort_key(x):
+            try:
+                return int(x.number)
+            except AttributeError:
+                try:
+                    return int(x.name)
+                except ValueError:
+                    return x.name
+
+
+
+        # для каждого уровня:
+        def make_TOC_structure (sorted_toc_elements, toc_elements, level):
+            def make_parent_code(p):
+                """код родителя, чтобы понять, его ли это сын"""
+                c = ''
+                c += f"{p.type}={p.name}"
+                if p.parents:
+                    c = p.parents +'&'+ c
+                return c
+            def collect_all_parents(parents):
+                r = []
+                for p in parents:
+                    r.append(p)
+                    r += collect_all_parents(p.children)
+                return r
+
+            current_level_elements = [e for e in toc_elements if int(e.level) == level]
+            # оговорка на случай если верхний уровень - первый, то есть нулевого уровня не было
+            if level==0 or (level==1 and not sorted_toc_elements):
+                current_level_elements.sort(key=get_sort_key)
+                for e in current_level_elements:
+                    sorted_toc_elements.append(e)
+
+            else:
+                # если элементов не осталось - всё
+                if not current_level_elements:
+                    return
+                # уже добавленные элементы - чтобы избежать повторного добавления элемента, разбитого страницей
+                already_added = set()
+                all_parents = collect_all_parents(sorted_toc_elements)
+
+                # если это не 0 уровень, значит уже есть родители - надо им добавить детей
+                for e in current_level_elements:
+                    if f'{e.type}={e.name}' not in already_added:
+                        # находим родителя:
+                        for p in all_parents:
+                            if e.parents == make_parent_code(p):
+                                p.children.append(e)
+                                # мы добавили такой элемент для этого родителя, а для других - нет
+                                pid = id(p)
+                                already_added.add(f'{pid}.{e.type}={e.name}')
+            make_TOC_structure(sorted_toc_elements, toc_elements, level+1)
+
+        toc_elements_with_info = []
+        pages = []
+        for element in toc_elements:
+            item = ContentItem()
+            item.populate_from_xml_element(element)
+            if item.type=='page':
+                pages.append(item)
+            else:
+                toc_elements_with_info.append(item)
+
+        sorted_content = []
+
+        make_TOC_structure(sorted_content, toc_elements_with_info, 0)
+
+
+        pages.sort(key=lambda x:x.name)
+        for item in pages:
+            content.add_item(item)
+        for item in sorted_content:
+            content.add_item(item)
+
         return content
 
 
@@ -999,9 +1108,11 @@ class XMLFormat:
                 #     t = t.strip()
                 #     result += f"\n{t}"
             elif link.daf:
-                temp_root = etree.Element('content')
-                for element in root.findall(f".//daf[@name='{link.daf}']"):
-                    temp_root.append(element)
+                elements = root.findall(f".//daf[@name='{link.daf}']")
+                if elements:
+                    temp_root = etree.Element('content')
+                    for element in elements:
+                        temp_root.append(element)
                 # result = etree.tostring(temp_root, pretty_print = True, encoding = 'utf8').decode('utf8')
                 # for t in element.itertext():
                 #     t = t.strip()
@@ -1010,6 +1121,7 @@ class XMLFormat:
             # print(link.params)
             # Так как адресация может быть и после указания страницы
             if link.params:
+                # TODO вроде temp_root без длины?
                 if len(temp_root):
                     # print('making new root')
                     root = temp_root
@@ -1018,6 +1130,18 @@ class XMLFormat:
                     # print(root.findall(f".//header[@type='amud']"))
                 import copy
                 params = copy.deepcopy(link.params)
+                # print(params)
+                # тут нужно сортировать, чтобы параметры шли в правильном порядке
+                def params_sort_key(x):
+                    key = x[0]
+                    try:
+                        return {'siman': 5,
+                                'seif': 7,
+                                'siman_katan': 10}[key]
+                    except KeyError:
+                        print('key->',key)
+                        return 999
+                params.sort(key=params_sort_key)
                 main_param,main_param_value = params.pop(0)
 
                 for element in root.findall(f".//header[@type='{main_param}']"):
@@ -1090,9 +1214,46 @@ class XMLFormat:
             result.append((link, etree.tostring(element, with_tail=False).decode('utf8')))
         return result
     def get_links(self, text: str) -> List[Tuple[Link,str,str]]:
+        """
+        Вызывается два раза: один раз на xml, другой раз на html
+        :param text:
+        :return:
+        """
         import html
-        root = etree.fromstring(text)
+        # print(text[-500:])
+        # print("*"*50)
         result = []
+        # Эта проблема возникла после миграции на 3.10 так что это костыль
+        # почему-то html документ перестал нормально парситься в качестве ссылки выдавал половину
+        # документа и-за чего в результате эта половина заменялась и не отображалась
+        if text.startswith("<!DOCTYPE html"):
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(text, 'lxml-xml')
+            for element in soup.findAll("link"):
+                # print(element)
+                link = Link()
+                link.set_author_name(AuthorName(element.attrs['author'], self))
+                link.set_book(Book(element.attrs['book'], link.author_name, self))
+                params = set(element.attrs.keys())
+                link.upper = False
+                if 'upper' in params:
+                    link.upper = True
+                    params.remove('upper')
+                params.remove('author')
+                params.remove('book')
+                for key in params:
+                    link.set_param(key, element.attrs[key])
+                result.append((link,
+                               element.text,
+                               str(element)))
+            return result
+
+        import io
+        # parser = etree.HTMLParser()
+        # tree = etree.parse(io.StringIO(text), parser)
+        # root = tree.getroot()
+        root = etree.fromstring(text)
+        # result = []
         for element in root.findall(r".//link"):
             link = Link()
             link.set_author_name(AuthorName(element.attrib['author'], self))
@@ -1160,7 +1321,10 @@ class XMLFormat:
             tmp = AllwaysDictDict()
             for a in e.attrib.keys():
                 tmp[a] = e.attrib[a]
-            tmp['value'] = e.text
+            tmp['value'] = ''
+            if e.text:
+                tmp['value'] = e.text
+
             for c in e.getchildren():
                 tmp[c.tag] = element_to_dict(c)
             return tmp
@@ -1225,10 +1389,12 @@ class Storage(FileStorage, XMLFormat):
 
     def get_text_by_link(self, link: Link) -> str:
         full_book_text = self.get_book_text(link.book)
-
-        text = self.select_text(full_book_text, link)
         # print("*"*20)
         # print(full_book_text)
+        # print("*"*20)
+        text = self.select_text(full_book_text, link)
+        # print("*"*20)
+        # print(text)
         # print("*"*20)
         return text
 
