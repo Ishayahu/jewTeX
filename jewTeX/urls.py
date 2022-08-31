@@ -13,8 +13,8 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
-from django.urls import path
+# from django.contrib import admin
+# from django.urls import path
 from django.urls import path, re_path
 import texts.views
 
@@ -33,5 +33,9 @@ urlpatterns = [
     path('api/text/talmud/<slug:name>/daf=<slug:daf>/', texts.views.api_request, name='text_api_request'),
     path('api/term/<str:term>/', texts.views.api_term, name='text_api_term'),
 
-    path('admin/', admin.site.urls),
+    # path('admin/', admin.site.urls),
 ]
+from django.conf import settings
+if not settings.DEBUG:
+    handler404 = 'texts.views.error400'
+    handler500 = 'texts.views.error500'

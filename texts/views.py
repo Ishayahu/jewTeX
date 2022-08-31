@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 import os
 import re
 from django.shortcuts import render, redirect
@@ -13,7 +13,10 @@ from texts.storage import Storage
 from texts.biblio import AuthorName, Book
 from django.utils.translation import get_language_from_request
 
-# TODO почистить старый код
+def error400(request, exception):
+    return HttpResponseRedirect('/')
+def error500(request):
+    return HttpResponseRedirect('/')
 
 s = Storage(os.path.join(os.getcwd(), 'TEXTS_DB'))
 

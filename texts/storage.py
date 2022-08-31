@@ -35,6 +35,7 @@ def params_sort_key(x):
                 'daf': 3,
                 'siman': 5,
                 'seif': 7,
+                'klal': 7,
                 'siman_katan': 10,
                 'ref': 99,
                 'girsa': 999
