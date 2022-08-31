@@ -59,7 +59,7 @@
     {% endif %}
 
     <footer>
-      &copy; 2019-2021 LaSil
+      &copy; 2019-{% now "Y" %} LaSil
     </footer>
 
   </div>
@@ -90,6 +90,59 @@
 		});
 	})
   </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', ()=>{
+            function termDefinitionShow(element){
+                console.log(element.target);
+                let target = element.target;
+                let term = target.innerText;
+                fetch(encodeURI(`/api/term/${term}/`))
+                .then((response)=>{
+                    if(!response.ok){
+                        throw new Error(`HTTP error: ${response.status}`);
+                    }
+                    return response.text();
+                }).then((text)=>{
+                    let result = JSON.parse(text);
+                    console.log(result);
+                    let t = document.createElement('span');
+                    let tclose = document.createElement('span');
+                    t.innerText = result['definition'];
+                    t.classList.add('termdefinition');
+                    tclose.classList.add('termdefinition-close');
+
+                    tclose.innerText = 'X';
+                    target.appendChild(t);
+                    t.appendChild(tclose);
+                    tclose.addEventListener('click',(e)=>{
+                        tclose.remove();
+                        t.remove();
+                        e.stopImmediatePropagation();
+                    });
+                    // позиционируем так чтобы не вылезало
+                    // за границы экрана
+                    // фиксированная ширина - 300px
+                    let screenWidth = screen.width;
+                    let termPos = t.getBoundingClientRect();
+                    if((termPos.x+termPos.width+10)>screenWidth){
+                        // по умолчанию -150 - увеличим
+                        t.style.left = '-'+(150+(termPos.x+termPos.width+10)-screenWidth)+'px';
+                    }
+
+                })
+
+            }
+            let terms = document.evaluate('//span[@class="term"]', document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+            console.log(terms.snapshotLength);
+            for(let i=0;i<terms.snapshotLength;i++){
+                let term = terms.snapshotItem(i);
+                console.log(term);
+                //term.addEventListener('mouseover', termDefinitionShow);
+                term.addEventListener('click', termDefinitionShow);
+            }
+            //console.log(topLevelQuotes)
+        })
+    </script>
 </body>
 {% load static %}
 <script src="{% static "texts/js/main.js" %}"></script>

@@ -20,16 +20,20 @@ s = Storage(os.path.join(os.getcwd(), 'TEXTS_DB'))
 def process_text(text, xslt_path):
     # преобразуем xml в нужный формат
     # print(text)
+    import re
     from lxml.etree import XMLSyntaxError
     try:
         text = s.htmlizer(text, xslt_path)
     except XMLSyntaxError as e:
         print(e)
         return text
+    # print("-"*10)
     # print(text)
-
+    # print("-"*10)
     # вставляем цитаты
     quote_xslt_path = xslt_path.split(os.path.sep)
+
+
     # print(os.path.sep)
     # print(quote_xslt_path)
     if not quote_xslt_path[-1].startswith('quote'):
@@ -38,33 +42,47 @@ def process_text(text, xslt_path):
     quote_xslt_path = s.get_libraty_meta_filepath(quote_xslt_path)
 
 
-    # print(quote_xslt_path)
+    # print(s.get_quotes(text))
     for quote_link, quote_tag in s.get_quotes(text):
+        # убираем, так как это закрытый тег, он появляется после htmlizer
+        # text = text.replace("</quote>", '')
+        # print("*"*50)
+        # print(quote_link)
+        # print(quote_link.raw_string)
+        # print(quote_tag)
         quote_text = s.get_text_by_link(quote_link)
-        # print(quote_tag, quote_text)
+        # print(quote_tag)
+        # print("*"*10,'before')
+        # print(quote_text)
         # print(s.htmlizer(quote_text, quote_xslt_path))
         try:
             quote_text = process_text(quote_text, quote_xslt_path)
             # quote_text = s.htmlizer(quote_text, quote_xslt_path)
         except XMLSyntaxError as e:
             print(e)
-        text = text.replace(quote_tag, f'"{quote_text}"')
+        # text = text.replace(quote_link.raw_string, f'"{quote_text}"')
+        # print("*"*10,'after')
+        # print(quote_text)
+        text = re.sub(rf"<quote[^>]*ref=['\"]{quote_link.get_param('ref')}['\"][^>]*> </quote>", f'"{quote_text}"', text)
+        # text = text.replace(quote_tag, f'"{quote_text}"')
     # вставляем ссылки
+    # print("99")
+    # print(text)
     for link, link_text, link_tag in s.get_links(text):
-        import re
+
         # print("*"*50)
         # print(link_tag, link_text)
         # print(link_tag)
-        url = reverse('text_api_request', args = (link.author_name.storage_id,
-                                                  link.book.storage_id,
-                                                  link.get_params()))
+        url = reverse('text_api_request', args=(link.author_name.storage_id,
+                                                link.book.storage_id,
+                                                link.get_params()))
         # print(url)
         replace_link_to = f'<span class="ajax-block"><a href="#!" class="js-ajax-link" data-ajax-url="{url}">{link_text}</a></span>'
         if link.upper:
             replace_link_to = '<sup>'+replace_link_to+'</sup>'
         # print('->', replace_link_to)
         # text = text.replace(link_tag, replace_link_to)
-        text = re.sub(rf"<link[^<]*>{link_text}</link>", replace_link_to, text)
+        text = re.sub(rf"<link[^<]*>{re.escape(link_text)}</link>", replace_link_to, text)
 
 
     # print(text[-300:])
@@ -345,22 +363,21 @@ def demarking(text, xslt_path):
             # quote_text = s.htmlizer(quote_text, quote_xslt_path)
         except XMLSyntaxError as e:
             print(e)
-        text = text.replace(quote_tag, f'"{quote_text}"')
+        # text = text.replace(quote_tag, f'"{quote_text}"')
+        # text = re.sub(rf"<quote author=['\"]{quote_link.author_name.storage_id}['\"] book=['\"]{quote_link.book.storage_id}['\"] .+[^<]*ref=['\"]{quote_link.get_param('ref')}['\"][^>]*></quote>", f'"{quote_text}"', text)
+        text = re.sub(rf"<quote[^>]*ref=['\"]{quote_link.get_param('ref')}['\"][^>]*></quote>", f'"{quote_text}"', text)
+
     # вставляем ссылки
     for link, link_text, link_tag in s.get_links(text):
-        # print(link_tag, link_text)
-        # url = reverse('text_api_request', args = (link.author_name.storage_id,
-        #                                           link.book.storage_id,
-        #                                           link.get_params()))
-        #
-        # replace_link_to  = f'<span class="ajax-block"><a href="#!" class="js-ajax-link" data-ajax-url="{url}">{link_text}</a></span>'
-        # if link.upper:
-        #     replace_link_to = '<sup>'+replace_link_to+'</sup>'
+        # тут нам не нужны ссылки, это же демаркинг
         text = text.replace(link_tag,link_text)
     # убираем обёртку, оставляем только текст
-    from lxml import etree
-    r = etree.fromstring(text)
-    text = r.text.strip()
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(text, 'lxml-xml')
+    text = soup.text.strip()
+    # from lxml import etree
+    # r = etree.fromstring(text)
+    # text = r.text.strip()
     # print("*"*20)
     # print(text)
     return text
@@ -399,6 +416,7 @@ def open_text(request, author, book, params):
         context['description'] = ''
     # context['title'] = "{}: {}".format(link.author_name.full_name, context.get('header',''))
     # TODO время публикации и урл для опенграф
+    # print(text)
     context['pulished_time'] = "{}".format("GET pulished_time")
     context['url'] = "{}".format("GET URL")
     # print(text)
@@ -720,3 +738,13 @@ def search(request):
     return render(request, 'texts/found.html', {
         'found':result, 'title': "Найдено"
     })
+
+def api_term(request, term):
+    with open(os.path.join(os.getcwd(), 'TEXTS_DB', 'TERM_DEFINITIONS', f"{term}.txt"), 'r', encoding='utf8') as f:
+        definition = f.read()
+
+    result = {
+        'name': term,
+        'definition': definition
+    }
+    return JsonResponse(result)

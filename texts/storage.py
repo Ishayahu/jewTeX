@@ -23,6 +23,27 @@ _all_fields_ru = ['author', 'book', 'siman', 'chapter', 'klal', 'sub_chapter', '
                'закон', 'стр', 'дибур аматхиль', 'симан катан', 'вопрос', 'мишна', 'perek', 'лист', 'заповедь', 'часть',
                   'буква', 'врата','стих','лист']
 
+def params_sort_key(x):
+    if(type(x)==type('')):
+        key = x
+    else:
+        key = x[0]
+    try:
+        return {
+                'j_chapter': 1,
+                'chapter': 3,
+                'posuk': 5,
+                'mishna': 5,
+                'daf': 3,
+                'siman': 5,
+                'seif': 7,
+                'siman_katan': 10,
+                'ref': 99,
+                'girsa': 999
+                }[key]
+    except KeyError:
+        print('key->', key)
+        return 999
 
 class _FileStorage:
     # все поля используются
@@ -167,7 +188,7 @@ class Link:
     Класс, который хранит информацию на ссылку в структурированной форме
     """
 
-    def __init__(self):
+    def __init__(self, raw=''):
 
         self.author_name = None  # type: AuthorName
         self.book = None  # type: Book
@@ -176,6 +197,7 @@ class Link:
         self.page = ''  # type: str
         self.daf = ''  # type: str
         self.raw_params = ''  # type: str
+        self.raw_string = raw
     def __repr__(self):
         return "{}|{}|{}".format(self.author_name, self.book, self.params)
     def str_inside_book_position(self):
@@ -233,7 +255,16 @@ class Link:
         r = ''
         for k,v in self.params:
             r += f"{k}={v}&"
+        if self.daf:
+            r += f"daf={self.daf}"
         return r
+
+    def get_param(self, key):
+        for k, v in self.params:
+            if k == key:
+                return v
+        return ''
+
     def get_path_to_file(self) -> str:
         """
         Возвращаем путь к файлу, где хранится текст
@@ -1132,15 +1163,6 @@ class XMLFormat:
                 params = copy.deepcopy(link.params)
                 # print(params)
                 # тут нужно сортировать, чтобы параметры шли в правильном порядке
-                def params_sort_key(x):
-                    key = x[0]
-                    try:
-                        return {'siman': 5,
-                                'seif': 7,
-                                'siman_katan': 10}[key]
-                    except KeyError:
-                        print('key->',key)
-                        return 999
                 params.sort(key=params_sort_key)
                 main_param,main_param_value = params.pop(0)
 
@@ -1200,77 +1222,133 @@ class XMLFormat:
 
 
     def get_quotes(self, text: str) -> List[Tuple[Link,str]]:
+        # print("-*"*10)
+        # print(text)
+        # print("-*"*10)
+
         root = etree.fromstring(text)
         result = []
-        for element in root.findall(r".//quote"):
-            link = Link()
-            link.set_author_name(AuthorName(element.attrib['author'], self))
-            link.set_book(Book(element.attrib['book'], link.author_name, self))
-            params = element.keys()
-            params.pop(params.index('author'))
-            params.pop(params.index('book'))
+
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(text, 'lxml-xml')
+        for element in soup.findAll("quote"):
+            # print(element)
+            link = Link(str(element)+"</quote>")
+            link.set_author_name(AuthorName(element.attrs['author'], self))
+            link.set_book(Book(element.attrs['book'], link.author_name, self))
+            params = set(element.attrs.keys())
+            link.upper = False
+            if 'upper' in params:
+                link.upper = True
+                params.remove('upper')
+            params.remove('author')
+            params.remove('book')
+            params = list(params)
+            # print(params)
+            params.sort(key=params_sort_key)
+            # print(params)
             for key in params:
-                link.set_param(key, element.attrib[key])
-            result.append((link, etree.tostring(element, with_tail=False).decode('utf8')))
+                link.set_param(key, element.attrs[key])
+            result.append((link,
+                           str(element)))
         return result
+
+
+        # if text.startswith("<!DOCTYPE html"):
+        #     print('bs4')
+        #     from bs4 import BeautifulSoup
+        #     soup = BeautifulSoup(text, 'lxml-xml')
+        #     for element in soup.findAll("quote"):
+        #         print(element)
+        #         link = Link(str(element)+"</quote>")
+        #         link.set_author_name(AuthorName(element.attrs['author'], self))
+        #         link.set_book(Book(element.attrs['book'], link.author_name, self))
+        #         params = set(element.attrs.keys())
+        #         link.upper = False
+        #         if 'upper' in params:
+        #             link.upper = True
+        #             params.remove('upper')
+        #         params.remove('author')
+        #         params.remove('book')
+        #         params = list(params)
+        #         # print(params)
+        #         params.sort(key=params_sort_key)
+        #         # print(params)
+        #         for key in params:
+        #             link.set_param(key, element.attrs[key])
+        #         result.append((link,
+        #                        str(element)))
+        #     return result
+        # print('lxml')
+        # print(root.findall(r".//quote"))
+        # for element in root.findall(r".//quote"):
+        #     print(element)
+        #     link = Link()
+        #     link.set_author_name(AuthorName(element.attrib['author'], self))
+        #     link.set_book(Book(element.attrib['book'], link.author_name, self))
+        #     params = element.keys()
+        #     params.pop(params.index('author'))
+        #     params.pop(params.index('book'))
+        #     for key in params:
+        #         link.set_param(key, element.attrib[key])
+        #     result.append((link, etree.tostring(element, with_tail=False).decode('utf8')))
+        # return result
+
+
     def get_links(self, text: str) -> List[Tuple[Link,str,str]]:
         """
         Вызывается два раза: один раз на xml, другой раз на html
         :param text:
         :return:
         """
-        import html
+        # import html
         # print(text[-500:])
         # print("*"*50)
         result = []
-        # Эта проблема возникла после миграции на 3.10 так что это костыль
-        # почему-то html документ перестал нормально парситься в качестве ссылки выдавал половину
-        # документа и-за чего в результате эта половина заменялась и не отображалась
-        if text.startswith("<!DOCTYPE html"):
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(text, 'lxml-xml')
-            for element in soup.findAll("link"):
-                # print(element)
-                link = Link()
-                link.set_author_name(AuthorName(element.attrs['author'], self))
-                link.set_book(Book(element.attrs['book'], link.author_name, self))
-                params = set(element.attrs.keys())
-                link.upper = False
-                if 'upper' in params:
-                    link.upper = True
-                    params.remove('upper')
-                params.remove('author')
-                params.remove('book')
-                for key in params:
-                    link.set_param(key, element.attrs[key])
-                result.append((link,
-                               element.text,
-                               str(element)))
-            return result
-
-        import io
-        # parser = etree.HTMLParser()
-        # tree = etree.parse(io.StringIO(text), parser)
-        # root = tree.getroot()
-        root = etree.fromstring(text)
-        # result = []
-        for element in root.findall(r".//link"):
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(text, 'lxml-xml')
+        for element in soup.findAll("link"):
+            # print(element)
             link = Link()
-            link.set_author_name(AuthorName(element.attrib['author'], self))
-            link.set_book(Book(element.attrib['book'], link.author_name, self))
-            params = element.keys()
+            link.set_author_name(AuthorName(element.attrs['author'], self))
+            link.set_book(Book(element.attrs['book'], link.author_name, self))
+            params = set(element.attrs.keys())
             link.upper = False
             if 'upper' in params:
                 link.upper = True
-                params.pop(params.index('upper'))
-            params.pop(params.index('author'))
-            params.pop(params.index('book'))
+                params.remove('upper')
+            params.remove('author')
+            params.remove('book')
             for key in params:
-                link.set_param(key, element.attrib[key])
+                link.set_param(key, element.attrs[key])
             result.append((link,
                            element.text,
-                           html.unescape(etree.tostring(element, with_tail=False).decode('utf8'))))
+                           str(element)))
         return result
+
+        # import io
+        # # parser = etree.HTMLParser()
+        # # tree = etree.parse(io.StringIO(text), parser)
+        # # root = tree.getroot()
+        # root = etree.fromstring(text)
+        # # result = []
+        # for element in root.findall(r".//link"):
+        #     link = Link()
+        #     link.set_author_name(AuthorName(element.attrib['author'], self))
+        #     link.set_book(Book(element.attrib['book'], link.author_name, self))
+        #     params = element.keys()
+        #     link.upper = False
+        #     if 'upper' in params:
+        #         link.upper = True
+        #         params.pop(params.index('upper'))
+        #     params.pop(params.index('author'))
+        #     params.pop(params.index('book'))
+        #     for key in params:
+        #         link.set_param(key, element.attrib[key])
+        #     result.append((link,
+        #                    element.text,
+        #                    html.unescape(etree.tostring(element, with_tail=False).decode('utf8'))))
+        # return result
 
     def htmlizer(self, text: str, xslt_path: str) -> str:
         """
@@ -1280,11 +1358,14 @@ class XMLFormat:
         # import lxml.etree as ET
 
         root = etree.fromstring(text)
+        # print(etree.tostring(root, ))
         xslt = etree.parse(xslt_path)
         transform = etree.XSLT(xslt)
         newdom = transform(root)
-        text = etree.tostring(newdom, encoding = 'utf8', pretty_print = True).decode('utf8')
-        return text
+        text = etree.tostring(newdom, encoding='utf8', pretty_print=True).decode('utf8')
+
+        # return text
+        return text.replace('xmlns="" ', '')
 
     # def simple_htmlizer(self, text: str, xslt_path: str) -> str:
     #     """

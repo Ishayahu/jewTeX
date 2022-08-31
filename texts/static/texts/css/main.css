@@ -143,6 +143,36 @@ aside {
 .term{
   font-style: italic;
   text-decoration: underline;
+  cursor: pointer;
+  position: relative;
+}
+.termdefinition{
+  position: absolute;
+  background-color: wheat;
+  border: 2px solid dimgrey;
+  border-radius: 2px;
+  /*max-width: 200px;*/
+  /*min-width: 50px;*/
+  /*max-height: 200px;*/
+  /*min-height: 50px;*/
+  width: 300px;
+  height: fit-content;
+  left: -150px;
+  bottom: 1em;
+  cursor: default;
+}
+.termdefinition-close{
+  position: absolute;
+  top: 0;
+  left: 274px;
+  border: 1px black solid;
+  border-radius: 50%;
+  font-style: normal;
+  padding: 3px;
+  background-color: black;
+  color: wheat;
+  z-index: 99;
+  cursor: pointer;
 }
 .link_needed{
   background-color: red;
@@ -179,3 +209,13 @@ aside {
 sup{
 	cursor: pointer;
 }
+
+/*выделяем цитаты в javascript чтобы было нагляднее разные уровни*/
+/*span[xmlns]{*/
+/*  !*padding-left: 10px;*!*/
+/*  !*border-left: 1px dotted black;*!*/
+/*}*/
+/*span[xmlns]>p{*/
+/*  padding-left: 10px;*/
+/*  border-left: 1px dotted black;*/
+/*}*/

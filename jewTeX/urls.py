@@ -29,7 +29,9 @@ urlpatterns = [
     # path('open/<slug:author>/<slug:book>/siman=<int:siman>&seif=<int:seif>/', texts.views.open_by_siman_and_seif, name = 'open_by_siman_seif'),
     # url(r'open/([^/]+)/([^/]+)/([^/]+)/([^/]+)/$', texts.views.open_text_old, name = 'open'),
     re_path(r'open/([^/]+)/([^/]+)/([^/]+)/$', texts.views.open_text, name='open_from_xml'),
-    re_path(r'api/text/([^/]+)/([^/]+)/([^/]+)/$', texts.views.api_request, name = 'text_api_request'),
+    re_path(r'api/text/([^/]+)/([^/]+)/([^/]+)/$', texts.views.api_request, name='text_api_request'),
+    path('api/text/talmud/<slug:name>/daf=<slug:daf>/', texts.views.api_request, name='text_api_request'),
+    path('api/term/<str:term>/', texts.views.api_term, name='text_api_term'),
 
     path('admin/', admin.site.urls),
 ]

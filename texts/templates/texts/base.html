@@ -39,7 +39,7 @@
 <p><a href="{% url 'need_to_be_done' %}" target="_blank">Надо доработать</a></p>
 <p><a href="{% url 'not_translated' %}" target="_blank">Надо перевести</a></p>
 
-<p>&copy; 2019-2021 LaSil. v0.2</p>
+<p>&copy; 2019-{% now "Y" %} LaSil. v0.2</p>
 
 <div class="cardStorage"></div>
 {% block script %}
