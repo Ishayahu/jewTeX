@@ -12,8 +12,6 @@ import xml.etree.ElementTree as ET
 from lxml import etree
 from texts.biblio import AuthorName, Book
 
-# TODO не отрабатываются <p offset...> надо сделать в html.xslt
-
 delimiters = '%'
 # part = абзац, мысль
 _all_fields = ['author', 'book', 'siman', 'chapter', 'klal', 'sub_chapter', 'seif',

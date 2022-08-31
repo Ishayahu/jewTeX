@@ -1,0 +1,47 @@
+				<comment number='33028'>
+					<p></p>
+				</comment>
+
+
+нужен и пробел и закрывающий таг, иначе не получается потом найти чтобы заменить. потому что иначе выходит либо закрытый тег, либо с закрывающим тегом
+<quote author='midrash_rabbah' book='bereshit' parsha='bereshit' chapter='17' letter="4" ref="eeviru_lifney_odom" girsa="joseph_isaac_schneersohn_sefer_hamaamarim_5682_0004"> </quote>
+
+Куски текста до и после (внутри тега <p>) надо выделять тегами <span>
+<header type='ref' name="eeviru_lifney_odom">
+	<header type='girsa' name='main'>
+		<p></p>
+	</header>
+	<header type='girsa' name='joseph_isaac_schneersohn_sefer_hamaamarim_5682_0004'>
+		<p></p>
+	</header>
+</header>
+                
+<link upper='upper' author='meir_leibush_ben_yehiel_michel_wisser' book='malbim_al_tehillim' chapter='145' posuk='1'>мальбим-1</link>
+
+<link upper='upper' author='artscroll' book='artscroll_al__talmud_berakhot' daf='60' amud='a' siman_katan='a'>артскрол-1</link>
+
+
+<link author='jacob_ben_asher' book='tur_yoreh_deah' siman='87' seif='1'>Тур-1:1</link>
+<link upper='upper' author='joseph_karo' book='beit_yosef_al_yoreh_deah' siman='93' siman_katan='1'>БЙ-1</link>
+<link upper='upper' author='joel_ben_samuel_sirkis' book='bayit_chadash_al_yoreh_deah' siman='93' siman_katan='1'>БаХ-1</link>
+
+
+<link upper='upper' author='meir_yonah_shatz' book='shaar_hachadash' gate='1' siman_katan='1'>Шаар аХадаш-1</link>
+
+
+<link author='joseph_karo' book='shulchan_aruch_yoreh_deah' siman='87' seif='1'>87:1</link>
+<link author='aaron_ben_jacob_ha_kohen' book='orchot_hayyim' chapter='80' siman='60'>Орхот Хаим</link>
+<link author='isaac_ben_aba_mari_from_marseille' book='itur_sofrim' chapter='80' siman='60'>Бааль аИтур</link>
+
+
+<link upper='upper' author='shabbatai_hakohen' book='shah_al_shulchan_aruch_yoreh_deah' siman='92' siman_katan='1'>шах-1</link>
+<link upper='upper' author='david_halevi_segal' book='taz_al_shulchan_aruch_yoreh_deah' siman='92' siman_katan='1'>таз-1</link>
+<link upper='upper' author='akiva_eger' book='chidushei_rabbi_akiva_eger_al_shulchan_aruch_yoreh_deah' siman='87' siman_katan='1'>хид.рАЭ-1</link>
+<link upper='upper' author='moses_isserles' book='darkhei_moshe_al_yoreh_deah' siman='87' siman_katan='1'>Дарк.Моше-1</link>
+<link upper='upper' author='jacob_ben_asher' book='torath_ha_chatath' clall='87' din='1'>Торат Хатат-17:4</link>
+<link upper='upper' author='solomon_eger' book='gilyon_maharsha' siman='92' siman_katan='60'>Гильон МааРША-1</link>
+
+<external_link url='' name=''>
+
+<work_needed></work_needed>
+<link_needed></link_needed>

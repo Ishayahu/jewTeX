@@ -2,3 +2,6 @@ TEXTS_DB/*
 .idea/*
 *.pyc
 test/*
+/venv/
+/jewTeX/settings.py
+/db.sqlite3

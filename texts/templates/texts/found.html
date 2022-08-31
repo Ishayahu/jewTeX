@@ -1,0 +1,39 @@
+{% extends 'texts/base.html' %}
+{% block head %}
+    <style>
+        .control{
+            cursor: pointer
+        }
+    </style>
+{% endblock %}
+{% block body %}
+<body>
+    <div class="container">
+    {% for e in found %}
+        <p><a href="open/{{ e.author }}/{{ e.book }}/{{ e.link }}">{{ e.author }} -> {{ e.book }} -> {{ e.link }}</a></p>
+        <p>{{ e.text }}</p>
+        <hr/>
+    {% endfor %}
+    </div>
+</body>
+
+{% endblock %}
+{% block script %}
+    <script>
+        $(document).ready(function (){
+            $(".control").each(function(index) {
+                    $(this).on("click", function () {
+                        let toc_id = $(this).attr('data_id');
+                        if ($(`#${toc_id}`).is(":visible")){
+                            $(`#${toc_id}`).hide();
+                            $(`#${toc_id}_control`).text("...")
+                        }else{
+                            $(`#${toc_id}`).show();
+                            $(`#${toc_id}_control`).text("↑↑↑")
+                        }
+                    })
+                })
+            })
+    </script>
+
+{% endblock %}
