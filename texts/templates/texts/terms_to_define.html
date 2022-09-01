@@ -1,12 +1,21 @@
-{% extends 'texts/base.html' %}
+{% extends 'texts/baseBootstrap5.html' %}
 {% block body %}
-<body>
+<div class="container">
+    <div class="row">
+
     <ul>
-        {% for term in terms %}
-            <li>{{ term }}</li>
+        {% for k,v in terms.items %}
+            <li>{{ k }}
+                <ul>
+                    {% for p in v %}
+                        <li>{{ p }}</li>
+                    {% endfor %}
+                </ul>
+            </li>
         {% endfor %}
     </ul>
+    </div>
+</div>
 
-</body>
 
 {% endblock %}

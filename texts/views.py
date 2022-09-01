@@ -17,8 +17,8 @@ def error400(request, exception):
     return HttpResponseRedirect('/')
 def error500(request):
     return HttpResponseRedirect('/')
-
-s = Storage(os.path.join(os.getcwd(), 'TEXTS_DB'))
+TEXTS_DB_PATH = os.path.join(os.getcwd(), 'TEXTS_DB')
+s = Storage(TEXTS_DB_PATH)
 
 def process_text(text, xslt_path):
     # преобразуем xml в нужный формат
@@ -587,17 +587,18 @@ def book(request, author, book):
 
 def terms_to_define(request):
     result = []
-    for root, dir, files in os.walk(r"F:\Yandex\Sites\jewTeX\TEXTS_DB"):
+    for root, dir, files in os.walk(TEXTS_DB_PATH):
         # print(root)
         if not '.git' in root:
             for items in files:
                 filepath = os.path.join(root, items)
-                with open(filepath, 'r', encoding = 'utf8') as fin:
-                    text = fin.read()
-                    for term in re.findall('\*\*(.+?)\*\*', text):
-                        term_definition = s.get_term(term)
-                        if term_definition == 'DEFINITION NOT FOUND':
-                            result.append([filepath, term, term_definition])
+                with open(filepath, 'r', encoding='utf8') as f:
+                    text = f.read()
+                    for term in re.findall('<term>([а-яА-Я ]+)<\/term>', text):
+                        term_definition = get_term_definition(term)
+                        if not term_definition:
+                            filepath = filepath.replace(TEXTS_DB_PATH,'')
+                            result.append([term, filepath])
                         else:
                             pass
                             # print(term_definition)
@@ -605,75 +606,75 @@ def terms_to_define(request):
     # for k in result:
         # print(k)
 
-    terms = {i[1] for i in result}
+    terms = dict()
+    for r in result:
 
+        if r[0] not in terms:
+            terms[r[0]] = set()
+        terms[r[0]].add(r[1])
+    print(terms)
     return render(request, 'texts/terms_to_define.html', {
-        'terms':terms, 'title': "Термины без определения"
+        'terms': terms, 'title': "Термины без определения"
     })
 
 def need_to_be_done(request):
     result = []
-    for root, dir, files in os.walk(r"F:\Yandex\Sites\jewTeX\TEXTS_DB"):
-        # print(root)
+    for root, dir, files in os.walk(TEXTS_DB_PATH):
+        print(root, dir)
         if not '.git' in root:
-            # for items in fnmatch.filter(files, "*"):
             for items in files:
                 filepath = os.path.join(root, items)
-                with open(filepath, 'r', encoding = 'utf8') as fin:
-                    text = fin.read()
-                    for subtext in re.findall('\?\?(.+?)\?\?', text):
-                        result.append([filepath, subtext])
-                        # result.append([filepath.replace(s.texts_path,'').split(os.path.sep)[1:], subtext])
+                with open(filepath, 'r', encoding='utf8') as f:
+                    for text in f.readlines():
+                        term = re.findall('<work_needed>(.*?)<\/work_needed>', text)
 
-    # for k in result:
-    #     print(k)
+                        if term:
+                            # print(term)
+                            for t in term:
+                                import html
+                                text = html.escape(text)
+                                pattern = re.escape(f'&lt;work_needed&gt;{html.escape(t)}&lt;/work_needed&gt;')
+                                text = re.sub(pattern, f'<span style="background-color:red">{t}</span>', text)
+                            filepath = filepath.replace(TEXTS_DB_PATH,'')
+                            result.append([text, filepath])
+    # print(result)
     return render(request, 'texts/need_to_be_done.html', {
-        'result':result, 'title': "Надо доделать"
+        'result': result, 'title': "Требуется доработка"
     })
 
-def not_translated(request):
-    raise NotImplementedError()
-# def not_translated(request):
-#     from urllib.request import urlopen
-#     result = []
-#     for root, dir, files in os.walk(r"F:\Yandex\Sites\jewTeX\TEXTS_DB"):
-#         # print(root)
-#         if not '.git' in root:
-#             # for items in fnmatch.filter(files, "*"):
-#             for items in files:
-#                 filepath = os.path.join(root, items)
-#                 with open(filepath, 'r', encoding = 'utf8') as fin:
-#                     text = fin.read()
-#                     # вставляем отрывки из других текстов
-#                     # %%maran:sha2:siman=106&seif=1%refferer%%
-#                     for to_replace, author_kitzur_name, book, params, refferer in re.findall(
-#                             '({0}{0}([a-z0-9_]+):([a-z0-9_]+):((?:[a-z_]+=[^{0}&]+&?)+){0}([a-z_0-9]+){0}{0})'.format(
-#                                 delimiters), text):
-#                         # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
-#                         quote = get_quote(author_kitzur_name, book, params, refferer)
-#                         if quote == "NOT FOUND":
-#                             result.append([filepath, (author_kitzur_name, book, params, refferer)])
-#
-#                     # обрабатываем "длинные" ссылки (как в url)
-#                     # %%в начале главы 106%maran:sha2:siman=106&seif=1%%
-#                     for to_replace, link_text, author_kitzur_name, book, params in re.findall(
-#                             '({0}{0}([^{0}]+){0}([a-z0-9_]+):([a-z0-9_]+):((?:[a-z_]+=[^{0}&]+&?)+){0}{0})'.format(
-#                                 delimiters), text):
-#                         # получаем полное имя комментатора. Потом по нему мы выберем нужный класс комментатора
-#                         link = Link()
-#                         link.set_author_name(AuthorName(author_kitzur_name))
-#                         link.set_book(Book(book, AuthorName(author_kitzur_name)))
-#                         link.set_params(params)
-#                         url = reverse('text_api_request', args = (author_kitzur_name, book, link.chapter_name, params))
-#                         a = urlopen("http://127.0.0.1:8000{}".format(url))
-#                         if "TEXT NOT FOUND" in a.read().decode('utf8'):
-#                             result.append([filepath, url])
-#
-#     # for k in result:
-#     #     print(k)
-#     return render(request, 'texts/need_to_be_done.html', {
-#         'result':result, 'title': "Надо перевести"
-#     })
+
+def need_to_translate(request):
+    result = []
+    count = 0
+    for root, dir, files in os.walk(TEXTS_DB_PATH):
+        print(root, dir)
+        if not '.git' in root:
+            for items in files:
+                filepath = os.path.join(root, items)
+                with open(filepath, 'r', encoding='utf8') as f:
+                    for text in f.readlines():
+                        term = re.findall('<link_needed>(.*?)<\/link_needed>', text)
+
+                        if term:
+                            # print(term)
+                            for t in term:
+                                import html
+                                text = html.escape(text)
+                                pattern = re.escape(f'&lt;link_needed&gt;{html.escape(t)}&lt;/link_needed&gt;')
+                                text = re.sub(pattern, f'<span style="background-color:red">{t}</span>', text)
+                            filepath = filepath.replace(TEXTS_DB_PATH,'')
+                            result.append([text, filepath])
+                            count += 1
+                            if count > 20:
+                                return render(request, 'texts/need_to_be_done.html', {
+                                    'result': result, 'title': "Требуется перевести"
+                                })
+
+    # print(result)
+    return render(request, 'texts/need_to_be_done.html', {
+        'result': result, 'title': "Требуется перевести"
+    })
+
 
 def search(request):
     if request.method!='POST':
@@ -742,12 +743,19 @@ def search(request):
         'found':result, 'title': "Найдено"
     })
 
+def get_term_definition(term):
+    term_path = os.path.join(os.getcwd(), 'TEXTS_DB', 'TERM_DEFINITIONS', f"{term}.txt")
+    if os.path.isfile(term_path):
+        with open(term_path, 'r', encoding='utf8') as f:
+            return f.read()
+    else:
+        return False
+
 def api_term(request, term):
-    with open(os.path.join(os.getcwd(), 'TEXTS_DB', 'TERM_DEFINITIONS', f"{term}.txt"), 'r', encoding='utf8') as f:
-        definition = f.read()
+
 
     result = {
         'name': term,
-        'definition': definition
+        'definition': get_term_definition(term)
     }
     return JsonResponse(result)

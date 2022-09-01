@@ -1,12 +1,16 @@
-{% extends 'texts/base.html' %}
+{% extends 'texts/baseBootstrap5.html' %}
 {% block body %}
 <body>
-    <ul>
-        {% for record in result %}
-            <li>{{ record.0 }} -> {{ record.1 }}</li>
-        {% endfor %}
-    </ul>
+    <div class="container">
+        <div class="row">
+            {% for record in result %}
+                <div class="col-12">{{ record.1 }}</div>
+                <div class="col-12 mb-3 border-bottom border-dark">{{ record.0 | safe }}</div>
+            {% endfor %}
 
-</body>
+        </div>
+    </div>
+
+
 
 {% endblock %}
