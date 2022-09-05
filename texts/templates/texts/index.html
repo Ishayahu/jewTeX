@@ -1,4 +1,4 @@
-{% extends 'texts/base.html' %}
+{% extends 'texts/baseBootstrap5.html' %}
 {% block body %}
 <body>
     <div class="container">
@@ -8,8 +8,14 @@
         <input type="submit" value="Искать">
     </form>
     <ul>
-        {% for author in authors %}
-            <li><a href="{% url 'author' author.storage_id %}">{{ author }}</a></li>
+        {% for group in authors %}
+            {% for author in group %}
+
+                {% if author.first %}
+                    ---------{{ group.name | upper }}---------
+                {% endif %}
+                <li><a href="{% url 'author' author.storage_id %}">{{ author }}</a></li>
+            {% endfor %}
 {#            <li>{{ author.storage_id }} / {{ author }}</li>#}
         {% endfor %}
     </ul>

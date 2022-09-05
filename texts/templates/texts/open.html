@@ -18,6 +18,11 @@
     <header>
       <h1>{{ header }}</h1>
     </header>
+    <a href="/">На главную</a> ➔
+    <a href="{% url 'author' link.author_name.storage_id %}">{{ link.author_name.full_name }}</a> ➔
+{#    <a href="{{ link.author_name.storage_id}}">{{ link.author_name.full_name }}</a> ➔#}
+    <a href="{% url 'book' link.author_name.storage_id link.book.storage_id %}">{{ link.book }}</a> ➔
+{#    <a href="{{ link.book.storage_id }}">{{ link.book }}</a> ➔#}
     {% if up %}
       <a href="{{ up }}">К содержанию</a>
     {% endif %}
