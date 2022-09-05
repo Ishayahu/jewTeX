@@ -92,6 +92,7 @@ def open_text(request, author_name, book_name, params, api):
             author_name.info[lang]['last_name']['value'],
             book_name.info[lang]['full_name']['value'],
             link.str_inside_book_position())
+        text += f"<a target='_blank' href='{link.get_url()}'>К книге</a>"
         return JsonResponse({'title': title, 'content': text, 'cardColor':
                              author_name.info['display']['css_class_name']['value']})
 

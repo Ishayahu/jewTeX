@@ -5,3 +5,4 @@ test/*
 /venv/
 /jewTeX/settings.py
 /db.sqlite3
+*/migrations/*

@@ -1,4 +1,4 @@
-{% extends 'texts/base.html' %}
+{% extends 'texts/baseBootstrap5.html' %}
 {% block head %}
     <style>
         .control{
@@ -8,17 +8,18 @@
 {% endblock %}
 {% block body %}
 <body>
-    {{ info | safe }}
-    <ol>
-    {{ html_toc | safe }}
-    </ol>
-{#    <ul>#}
-{#        {% for item in content.items %}#}
-{#            <li> {{ item.html_indentation | safe }}#}
-{#                 <a href="{% url 'open_from_xml' author.storage_id book.storage_id item.get_link_params %}">{{ item | safe}}</a>#}
-{#            </li>#}
-{#        {% endfor %}#}
-{#    </ul>#}
+    <div class="container">
+        <div class="row">
+            {{ info | safe }}
+        </div>
+        <div class="row">
+            <ol>
+                {{ html_toc | safe }}
+            </ol>
+        </div>
+    </div>
+
+
 
 </body>
 
