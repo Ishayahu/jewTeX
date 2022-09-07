@@ -1,10 +1,9 @@
-				<comment number='33028'>
-					<p></p>
-				</comment>
+<comment number='33028'>
+	<p></p>
+</comment>
 
 
-нужен и пробел и закрывающий таг, иначе не получается потом найти чтобы заменить. потому что иначе выходит либо закрытый тег, либо с закрывающим тегом
-<quote author='midrash_rabbah' book='bereshit' parsha='bereshit' chapter='17' letter="4" ref="eeviru_lifney_odom" girsa="joseph_isaac_schneersohn_sefer_hamaamarim_5682_0004"> </quote>
+<quote author='midrash_rabbah' book='bereshit' parsha='bereshit' chapter='17' letter="4" ref="eeviru_lifney_odom" girsa="joseph_isaac_schneersohn_sefer_hamaamarim_5682_0004" />
 
 Куски текста до и после (внутри тега <p>) надо выделять тегами <span>
 <header type='ref' name="eeviru_lifney_odom">
