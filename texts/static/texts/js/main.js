@@ -87,7 +87,24 @@
             body.innerHTML = json['content'];
             dragPanel.innerHTML = json['title'];
             elem.classList.add(json['cardColor']);
-            
+            let comments = body.getElementsByClassName('comment');
+            // console.log('можно прятать комментарии?');
+            console.log(comments);
+            for(let i=0; i<comments.length; i++){
+              let comment = comments[i];
+              let sup = comment.children[0];
+              let comment_text = comment.children[1];
+              // 1) прячем комментарии
+              comment_text.style.display = 'none';
+              // 2) вешаем обработчики на клик
+              sup.addEventListener('click',()=>{
+                if(comment_text.style.display === 'none'){
+                  comment_text.style.display = '';
+                }else{
+                  comment_text.style.display = 'none';
+                }
+              })
+            }
             initAjaxLink(scope=elem);
           })
     

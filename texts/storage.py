@@ -350,10 +350,10 @@ class Content:
             self.toc.append(i.get_link_params())
             if i.children:
                 prepare_prev_and_next(i)
-        print(self.toc)
-        print(link.get_params())
+        # print(self.toc)
+        # print(link.get_params())
         curr_idx = self.toc.index(link.get_params())
-        print(curr_idx)
+        # print(curr_idx)
         while curr_idx > 0:
             if not link.get_params().startswith(self.toc[curr_idx-1]):
                 self.prev_subchapter_params = self.toc[curr_idx-1]
@@ -551,7 +551,7 @@ class XMLFormat:
             # выбираем все элементы, которые должны быть в содержании
             t_toc_elements = self.extract_toc_elements_form_xml(root)
             toc_elements += t_toc_elements
-        print(toc_elements)
+        # print(toc_elements)
 
         def get_sort_key(x):
             try:
@@ -750,6 +750,7 @@ class Storagev2:
                         link.set_param(a, quote.attrib[a])
                 # для каждой цитаты получаем полный текст, с заменой в нём всех цитат
                 quoteRoot = getText(link)
+                # print(etree.tostring(quoteRoot, encoding='utf8', pretty_print=True).decode('utf8'))
                 quoteRoot.tag = 'quote'
                 quote.getparent().replace(quote, quoteRoot)
             return root
@@ -772,22 +773,25 @@ class Storagev2:
             a.attrib['class'] = "js-ajax-link"
             a.attrib['data-ajax-url'] = f"/api/text/{localAuthor.storage_id}/{localBook.storage_id}/{localLink.get_params()}/"
             a.text = alink.text
-            a.tail = alink.tail
+
             span.append(a)
             if 'upper' in alink.attrib:
                 sup = etree.Element('sup')
                 sup.append(span)
+                sup.tail = alink.tail
                 alink.getparent().replace(alink, sup)
             else:
+                span.tail = alink.tail
                 alink.getparent().replace(alink, span)
-
+        # print(etree.tostring(root, encoding='utf8', pretty_print=True).decode('utf8'))
         # 3) применяем XSLT это
         xslt_path = self.__storageType.get_xslt_path(link.book)
+        # print(xslt_path)
         xslt = etree.parse(xslt_path)
         transform = etree.XSLT(xslt)
         newdom = transform(root)
         text = etree.tostring(newdom, encoding='utf8', pretty_print=True).decode('utf8')
-
+        # print(text)
         return text.replace('xmlns="" ', '')
 
 

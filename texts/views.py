@@ -55,7 +55,7 @@ def open_text(request, author_name, book_name, params, api):
 
     if not api:
         book_toc = s.get_book_TOC(book_name)  # type:  Content
-        print(book_toc)
+        # print(book_toc)
         context = dict()
         context['text'] = text
 
@@ -63,7 +63,11 @@ def open_text(request, author_name, book_name, params, api):
         context['header'] = f'{author_name.full_name}: {book_name.full_name}: {link.str_inside_book_position()}'
         # for openGraph
         try:
-            context['description'] = "{}...".format(text[:147])
+            from bs4 import BeautifulSoup
+            b = BeautifulSoup(text, 'html.parser')
+            desc = b.body.text
+            context['description'] = "{}...".format(desc[:147])
+            # context['description'] = "{}...".format(text[:147])
             # context['description'] = "{}...".format(demarking(text,s.get_xslt_path(link.book,'quote_html'))[:200])
         except AttributeError:
             print('views.397')
@@ -260,7 +264,7 @@ def terms_to_define(request):
         if r[0] not in terms:
             terms[r[0]] = set()
         terms[r[0]].add(r[1])
-    print(terms)
+    # print(terms)
     return render(request, 'texts/terms_to_define.html', {
         'terms': terms, 'title': "Термины без определения"
     })
@@ -269,7 +273,7 @@ def terms_to_define(request):
 def need_to_be_done(request):
     result = []
     for root, dir, files in os.walk(TEXTS_DB_PATH):
-        print(root, dir)
+        # print(root, dir)
         if not '.git' in root:
             for items in files:
                 filepath = os.path.join(root, items)
@@ -296,7 +300,7 @@ def need_to_translate(request):
     result = []
     count = 0
     for root, dir, files in os.walk(TEXTS_DB_PATH):
-        print(root, dir)
+        # print(root, dir)
         if not '.git' in root:
             for items in files:
                 filepath = os.path.join(root, items)
