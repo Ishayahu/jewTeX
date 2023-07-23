@@ -18,10 +18,10 @@ delimiters = '%'
 # part = абзац, мысль
 _all_fields = ['author', 'book', 'siman', 'chapter', 'klal', 'sub_chapter', 'seif',
                'din', 'page', 'dibur_amathil', 'siman_katan', 'question', 'mishna', 'perek', 'amud', 'mizva', 'part',
-               'letter', 'gate','posuk', 'daf']
+               'letter', 'gate','posuk', 'daf', 'parsha', 'j_chapter']
 _all_fields_ru = ['author', 'book', 'siman', 'chapter', 'klal', 'sub_chapter', 'сеиф',
                'закон', 'стр', 'дибур аматхиль', 'симан катан', 'вопрос', 'мишна', 'perek', 'лист', 'заповедь', 'часть',
-                  'буква', 'врата','стих','лист']
+                  'буква', 'врата','стих','лист', 'глава', 'парша']
 
 def getStartYear(i) -> int:
     # print(i.info['ru']['first_name']['value'], i.info['ru']['start_year']['value'])
@@ -43,6 +43,7 @@ def params_sort_key(x):
                 'dibur_amathil': 1,
                 'j_chapter': 1,
                 'chapter': 3,
+                'parsha': 3,
                 'posuk': 5,
                 'mishna': 5,
                 'daf': 3,
@@ -93,18 +94,20 @@ class Link:
     def str_inside_book_position(self):
         params_dict = dict()
         r = ""
-        for k,v in self.params:
-            if k!='xmlns':
+        for k, v in self.params:
+            if k !='xmlns':
                 params_dict[k] = v
 
         # print(params_dict)
-        for idx,chapter_type in enumerate(_FileStorage.chapter_level):
+        for idx, chapter_type in enumerate(_FileStorage.chapter_level):
             if chapter_type in params_dict.keys():
-                r+= f"{_FileStorage.chapter_level_ru[idx]} {params_dict[chapter_type]}"
+                r += f"{_FileStorage.chapter_level_ru[idx]} {params_dict[chapter_type]}"
                 del params_dict[chapter_type]
-        for k,v in params_dict.items():
+        for k, v in params_dict.items():
             idx = _all_fields.index(k)
-            r+= f", {_all_fields_ru[idx]} {v}"
+            r += f", {_all_fields_ru[idx]} {v}"
+        if not r and self.daf:
+            r = f"Лист {self.daf}"
         return r
 
     def set_author_name(self, author_name: AuthorName):
@@ -729,6 +732,7 @@ class Storagev2:
         """
         self.__storageType = storageType
         self.__storageFormat = storageFormat
+        self.texts_path = self.__storageType.texts_path
 
     def get_text_by_link(self, link: Link) -> str:
         # TODO в иделае это надо разделить на формат/хранилище. ну или забить на эту идею
@@ -741,15 +745,15 @@ class Storagev2:
             # 1) сперва вставляем все цитаты
             for quote in root.findall(".//quote"):
 
-                link = Link()
+                localLink = Link()
                 author = AuthorName(quote.attrib['author'], self, 'ru')
-                link.set_author_name(author)
-                link.set_book(Book(quote.attrib['book'], author, self, 'ru'))
+                localLink.set_author_name(author)
+                localLink.set_book(Book(quote.attrib['book'], author, self, 'ru'))
                 for a in quote.attrib.keys():
                     if a not in ('author', 'book'):
-                        link.set_param(a, quote.attrib[a])
+                        localLink.set_param(a, quote.attrib[a])
                 # для каждой цитаты получаем полный текст, с заменой в нём всех цитат
-                quoteRoot = getText(link)
+                quoteRoot = getText(localLink)
                 # print(etree.tostring(quoteRoot, encoding='utf8', pretty_print=True).decode('utf8'))
                 quoteRoot.tag = 'quote'
                 quote.getparent().replace(quote, quoteRoot)

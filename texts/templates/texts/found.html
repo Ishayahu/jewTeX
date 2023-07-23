@@ -10,7 +10,7 @@
 <body>
     <div class="container">
     {% for e in found %}
-        <p><a href="open/{{ e.author }}/{{ e.book }}/{{ e.link }}">{{ e.author }} -> {{ e.book }} -> {{ e.link }}</a></p>
+        <p><a href="/open/{{ e.author }}/{{ e.book }}/{{ e.link }}">{{ e.author }} -> {{ e.book }} -> {{ e.link }}</a></p>
         <p>{{ e.text }}</p>
         <hr/>
     {% endfor %}

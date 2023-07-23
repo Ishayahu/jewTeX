@@ -389,7 +389,8 @@ def search(request):
         tmp.reverse()
         ll = ''
         for k, v in tmp:
-            ll += f"{k}={v}&"
+            if k not in ('ref',):
+                ll += f"{k}={v}&"
         ll = ll[:-1]
         l.link = ll
         result.append(l)

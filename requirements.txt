@@ -4,3 +4,5 @@ lxml
 # cyrtranslit
 requests
 beautifulsoup4
+boto3
+keyring

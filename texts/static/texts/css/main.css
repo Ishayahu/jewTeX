@@ -219,3 +219,16 @@ sup{
 /*  padding-left: 10px;*/
 /*  border-left: 1px dotted black;*/
 /*}*/
+
+@media print {
+  nav, #helpLinks, aside, footer{
+    display: none;
+  }
+  header > h1{
+    font-size: 1em!important;
+  }
+  article{
+    background-color: white;
+  }
+
+}

@@ -17,6 +17,7 @@ from django.contrib import admin
 # from django.urls import path
 from django.urls import path, re_path
 import texts.views
+import audio.views as audio
 import database.views
 
 urlpatterns = [
@@ -24,6 +25,10 @@ urlpatterns = [
     path('avoda/', database.views.index, name='avoda_index'),
     path('avoda/tag/<int:pk>', database.views.list_by_tag, name='avoda_list_by_tag'),
     path('avoda/show/<int:pk>', database.views.show_by_pk, name='avoda_show_by_pk'),
+
+    path('audio/list/', audio.list, name='audio_list'),
+    path('audio/get/<str:name>/', audio.get, name='audio_get'),
+    path('audio/get_toc/<str:name>/', audio.get_toc, name='audio_get_toc'),
 
     re_path(r'^$', texts.views.index, name='index'),
     path(r'utils/terms_to_define', texts.views.terms_to_define, name='terms_to_define'),
@@ -39,6 +44,7 @@ urlpatterns = [
     # re_path(r'api/text/([^/]+)/([^/]+)/([^/]+)/$', texts.views.api_request, kwargs={'api': False}, name='text_api_request'),
     # path('api/text/talmud/<slug:name>/daf=<slug:daf>/', texts.views.api_request, name='text_api_request'),
     path('api/term/<str:term>/', texts.views.api_term, name='text_api_term'),
+
 
 
     # path('admin/', admin.site.urls),

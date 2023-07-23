@@ -1,0 +1,145 @@
+{% extends 'texts/baseBootstrap5.html' %}
+{% block body %}
+    <style>
+        .link{
+            cursor: pointer;
+        }
+        .level1{
+            margin-left: 20px;
+        }
+        .level2{
+            margin-left: 20px;
+        }
+        .level3{
+            margin-left: 20px;
+        }
+        .level4{
+            margin-left: 20px;
+        }
+        audio {
+            {#width: 100px;#}
+            {#height: 100px;#}
+        }
+        .toc-link{
+            cursor: pointer;
+        }
+    </style>
+    <div class="container">
+        <div class="row">
+            <div class="col-4"></div>
+            <div class="col-4"><audio id="audio" controls></audio></div>
+            <div class="col-4"></div>
+        </div>
+        <div class="row">
+            <div class="col-4"></div>
+            <div class="col-4" id="audio_toc">
+{#                <div class="rew" data-time="10">10</div>#}
+{#                <div class="rew" data-time="20">20</div>#}
+{#                <div class="rew" data-time="40">40</div>#}
+            </div>
+            <div class="col-4"></div>
+        </div>
+
+
+    </div>
+    <div class="container" id="container"></div>
+    <script>
+        window.objects = {{ jsonObjects | safe}};
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", (e)=>{
+            let container = document.getElementById('container');
+            for (let key in window.objects){
+                let o = document.createElement('p');
+                o.innerHTML = key;
+                o.classList.add('level1');
+                o.classList.add('link');
+                o.addEventListener('click', (e) => {
+                    console.log('click on ' + key);
+                    for (let key1 in window.objects[key]) {
+                        let o1 = document.createElement('p');
+                        o1.innerHTML = key1;
+                        o1.classList.add('level2');
+                        o1.classList.add('link');
+                        o1.addEventListener('click', (e) => {
+                            console.log('click on ' + key1);
+                            for (let key2 in window.objects[key][key1]){
+                                let o2 = document.createElement('p');
+                                o2.innerHTML = key2;
+                                o2.classList.add('level3');
+                                o2.classList.add('link');
+                                o2.addEventListener('click', (e) => {
+                                    if(e.target.classList.contains('level4')){
+                                        return;
+                                    }
+                                    console.log('click on ' + key2);
+                                    window.objects[key][key1][key2].forEach((name) => {
+                                        let o3 = document.createElement('p');
+                                        o3.innerHTML = name;
+                                        o3.classList.add('level4');
+                                        o3.classList.add('link');
+                                        o2.appendChild(o3);
+                                        o2.addEventListener('click', (e)=>{
+                                            console.log(e.target);
+                                            {#let audio = document.createElement('audio');#}
+                                            {#audio.src = `/audio/get/${name}`;#}
+                                            {#o2.appendChild(audio)#}
+                                            let audio = document.getElementById('audio');
+                                            {#audio.controls = true;#}
+                                            audio.src = `/audio/get/${name}`;
+                                            audio.play();
+                                            fetch(`/audio/get_toc/${name}`)
+                                                .then(response => {
+                                                    return response.json()
+                                                }).then(body => {
+                                                    {#console.log(response)#}
+                                                    let toc = document.getElementById('audio_toc');
+                                                    toc.replaceChildren();
+                                                    for (let key in body) {
+
+                                                        let rew = document.createElement('div');
+                                                        rew.classList.add('toc-link');
+                                                        {#rew.setAttribute('data-time', key)#}
+                                                        rew.innerText = body[key];
+                                                        rew.addEventListener('click', ()=> {
+                                                            console.log(key, body[key]);
+                                                            audio.currentTime = parseInt(key) * 60;
+                                                            audio.play();
+                                                        })
+                                                        toc.appendChild(rew)
+                                                    }
+
+                                                })
+                                            e.stopImmediatePropagation()
+
+                                            audio.addEventListener('playing', ()=>{
+                                                {#let times = document.getElementsByClassName('rew');#}
+                                                /*
+                                                for (let i=0; i<times.length; i++) {
+                                                    let rew = times[i];
+                                                    console.log(rew);
+                                                    rew.addEventListener('click', () => {
+                                                        let time = rew.getAttribute('data-time');
+                                                        console.log(rew, time);
+                                                        audio.currenTime = parseInt(time) * 60;
+                                                    })
+                                                }*/
+                                            })
+                                        })
+
+                                    })
+                                    e.stopPropagation();
+                                })
+                                o1.appendChild(o2);
+                            }
+                            e.stopPropagation();
+                        })
+                        o.appendChild(o1)
+                    }
+                    e.stopPropagation();
+                })
+                container.appendChild(o);
+            }
+        })
+    </script>
+{% endblock %}
