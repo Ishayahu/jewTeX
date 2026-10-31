@@ -557,13 +557,14 @@ class XMLFormat:
         # print(toc_elements)
 
         def get_sort_key(x):
+            # An explicit number controls the order without changing the
+            # addressable name. Always return comparable keys: int and str
+            # cannot be compared to each other in Python 3.
+            value = getattr(x, 'number', None) or x.name
             try:
-                return int(x.number)
-            except AttributeError:
-                try:
-                    return int(x.name)
-                except ValueError:
-                    return x.name
+                return (0, int(value), x.name)
+            except (TypeError, ValueError):
+                return (1, str(value), x.name)
 
 
 
