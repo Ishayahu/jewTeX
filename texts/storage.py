@@ -355,18 +355,23 @@ class Content:
                 prepare_prev_and_next(i)
         # print(self.toc)
         # print(link.get_params())
-        curr_idx = self.toc.index(link.get_params())
-        # print(curr_idx)
+        # A leaf can be addressed either by daf alone or by its containing
+        # chapter plus daf. The TOC stores daf leaves under the short key.
+        current_params = link.get_params()
+        if current_params not in self.toc and link.daf:
+            short_daf = f'daf={link.daf}'
+            if short_daf in self.toc:
+                current_params = short_daf
+
+        curr_idx = self.toc.index(current_params)
         while curr_idx > 0:
-            if not link.get_params().startswith(self.toc[curr_idx-1]):
+            if not current_params.startswith(self.toc[curr_idx-1]):
                 self.prev_subchapter_params = self.toc[curr_idx-1]
                 break
             curr_idx -= 1
-        curr_idx = self.toc.index(link.get_params())
+        curr_idx = self.toc.index(current_params)
         while curr_idx+1 < len(self.toc):
-            # print(self.toc[curr_idx+1])
-
-            if not self.toc[curr_idx+1].startswith(link.get_params()):
+            if not self.toc[curr_idx+1].startswith(current_params):
                 self.next_subchapter_params = self.toc[curr_idx+1]
                 break
             curr_idx += 1
@@ -666,6 +671,16 @@ class XMLFormat:
             new_elements = []
             main_param, main_param_value = params.pop(0)
             for element in elements:
+                # When a daf/page was selected first, its chapter is an
+                # ancestor rather than a descendant. Honor that chapter
+                # qualifier without discarding the selected leaf.
+                if main_param == 'chapter' and any(
+                    parent.get('type') == 'chapter' and
+                    parent.get('name') == main_param_value
+                    for parent in element.iterancestors('header')
+                ):
+                    new_elements.append(element)
+                    continue
                 xpath = f".//header[@type='{main_param}'][@name='{main_param_value}']"
                 for c in element.findall(xpath):
                     new_elements.append(c)
