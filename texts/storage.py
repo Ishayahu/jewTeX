@@ -49,7 +49,7 @@ def params_sort_key(x):
                 'daf': 3,
                 'siman': 5,
                 'seif': 7,
-                'klal': 7,
+                'klal': 4,  # A klal contains simanim: resolve the parent before siman.
                 'letter': 10,
                 'siman_katan': 10,
                 'ref': 99,

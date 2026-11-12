@@ -82,3 +82,49 @@ class DafAddressingTests(SimpleTestCase):
         link.set_params("daf=44b")
         toc.set_current_place(link)
         self.assertEqual(toc.next_subchapter_params, "daf=45a")
+
+
+class KlalAndSimanAddressingTests(SimpleTestCase):
+    """Regression: Rosh responsa are grouped by klal, then by siman."""
+
+    XML = """<content>
+        <header level="0" type="klal" name="12">
+            <header level="1" type="siman" name="2">
+                <header level="2" type="ref" name="Разрешение обета о пожертвовании бедным">
+                    <p-ai>Первый абзац Роша</p-ai>
+                    <p-ai>Второй абзац Роша</p-ai>
+                </header>
+            </header>
+        </header>
+        <header level="0" type="klal" name="13">
+            <header level="1" type="siman" name="2">
+                <header level="2" type="ref" name="Разрешение обета о пожертвовании бедным">
+                    <p-ai>Другой ответ</p-ai>
+                </header>
+            </header>
+        </header>
+    </content>"""
+
+    def test_klal_then_siman_then_ref_finds_rosh_responsum(self):
+        from texts.storage import Link
+        link = Link()
+        link.set_params("klal=12&siman=2&ref=Разрешение обета о пожертвовании бедным")
+        root = XMLFormat.select_text([self.XML], link)
+        self.assertEqual(
+            [p.text for p in root.findall("p-ai")],
+            ["Первый абзац Роша", "Второй абзац Роша"],
+        )
+
+    def test_param_order_in_url_does_not_matter(self):
+        from texts.storage import Link
+        link = Link()
+        link.set_params("siman=2&ref=Разрешение обета о пожертвовании бедным&klal=12")
+        root = XMLFormat.select_text([self.XML], link)
+        self.assertEqual(len(root.findall("p-ai")), 2)
+
+    def test_does_not_select_same_siman_in_other_klal(self):
+        from texts.storage import Link
+        link = Link()
+        link.set_params("klal=14&siman=2&ref=Разрешение обета о пожертвовании бедным")
+        root = XMLFormat.select_text([self.XML], link)
+        self.assertEqual(len(root), 0)
